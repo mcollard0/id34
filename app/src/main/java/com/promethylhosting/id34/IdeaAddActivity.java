@@ -16,7 +16,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.speech.RecognizerIntent;
-import android.support.v4.widget.CursorAdapter;
+import android.widget.CursorAdapter;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -253,7 +253,7 @@ public static final String CONSUMER_KEY = "**REDACTED**"; // See .secrets file f
 
 	private boolean getTwitterOAuth() {
 		// Twitter OAuth functionality disabled for basic APK build
-		Log.i(TAG, "Twitter OAuth not available in basic build");
+		Log.i(LOG_TAG, "Twitter OAuth not available in basic build");
 		return false;
 	}
 

@@ -2,11 +2,11 @@ package com.promethylhosting.id34;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.NavUtils;
+import android.app.Activity;
+import android.content.Intent;
 import android.view.MenuItem;
 
-public class IdeaDetailActivity extends FragmentActivity {
+public class IdeaDetailActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,7 +21,7 @@ public class IdeaDetailActivity extends FragmentActivity {
                     getIntent().getStringExtra(IdeaDetailFragment.ARG_ITEM_ID));
             IdeaDetailFragment fragment = new IdeaDetailFragment();
             fragment.setArguments(arguments);
-            getSupportFragmentManager().beginTransaction()
+            getFragmentManager().beginTransaction()
                     .add(R.id.idea_detail_container, fragment)
                     .commit();
         }

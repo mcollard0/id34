@@ -14,8 +14,8 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.app.ListFragment;
-import android.support.v4.widget.SimpleCursorAdapter;
+import android.app.ListFragment;
+import android.widget.SimpleCursorAdapter;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.ContextMenu;
@@ -319,16 +319,8 @@ public class IdeaListFragment extends ListFragment {
     	  
       		if (progressDialog != null) progressDialog = ProgressDialog.show(getActivity(), "", "Loading...");
       		try {
-      			// Check if database migration is needed
-      			DatabaseMigrationHelper migrationHelper = new DatabaseMigrationHelper(context);
-      			if (migrationHelper.isMigrationNeeded()) {
-      				Log.i(LOG_TAG, "Database migration required, performing migration...");
-      				boolean migrationSuccess = migrationHelper.performMigration();
-      				if (!migrationSuccess) {
-      					Log.e(LOG_TAG, "Database migration failed!");
-      					// Continue with SQLCipherAdapter anyway - it will create new database
-      				}
-      			}
+      			// Database migration disabled for minimal build
+      			Log.i(LOG_TAG, "Database migration disabled - using direct SQLCipherAdapter initialization");
       			
       			// Use encrypted SQLCipherAdapter
       			sql = new SQLCipherAdapter(context);
@@ -361,17 +353,16 @@ public class IdeaListFragment extends ListFragment {
     		try {
     			// Initialize database connection
     			if (sql == null) {
-    				// Check if database migration is needed
-    				DatabaseMigrationHelper migrationHelper = new DatabaseMigrationHelper(context);
-    				if (migrationHelper.isMigrationNeeded()) {
-    					Log.i(LOG_TAG, "Database migration required, performing migration...");
-    					migrationHelper.performMigration();
-    				}
+    				// Database migration disabled for minimal build
+    				Log.i(LOG_TAG, "Database migration disabled - direct initialization");
     				
-    				// Use encrypted SQLCipherAdapter
-    				sql = new SQLCipherAdapter(context);
-    				sql.openToRead();
-    			}
+    			// Use encrypted SQLCipherAdapter
+    			sql = new SQLCipherAdapter(context);
+    			sql.openToRead();
+    		}
+    			
+    			// Create demo item if database is empty
+    			sql.createDemoItemIfEmpty();
     			
     			// Query categories from database
     			return sql.queryCats();

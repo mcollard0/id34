@@ -262,12 +262,31 @@ public class SQLCipherAdapter {
 		
 	 
 	 
-	 public long insert(String content){
-	  
-	  ContentValues contentValues = new ContentValues();
-	  contentValues.put(KEY_ID, content);
-	  return sqLiteDatabase.insert(MYDATABASE_TABLE_CATEGORY, null, contentValues);
-	 }
+ public long insert(String content){
+  
+  ContentValues contentValues = new ContentValues();
+  contentValues.put(KEY_ID, content);
+  return sqLiteDatabase.insert(MYDATABASE_TABLE_CATEGORY, null, contentValues);
+ }
+ 
+ // Add demo item if database is empty
+ public void createDemoItemIfEmpty() {
+     try {
+         Log.i(LOG_TAG, "Checking if demo item needed...");
+         Cursor cursor = queryCats();
+         if (cursor == null || cursor.getCount() == 0) {
+             Log.i(LOG_TAG, "Database empty, creating demo item");
+             insert("Test Item #id34");
+             Log.i(LOG_TAG, "Demo item created: Test Item #id34");
+         } else {
+             Log.i(LOG_TAG, "Database has " + cursor.getCount() + " items, no demo needed");
+         }
+         if (cursor != null) cursor.close();
+     } catch (Exception e) {
+         Log.e(LOG_TAG, "Error creating demo item: " + e.getMessage());
+         e.printStackTrace();
+     }
+ }
 	 
 	 public int deleteAll(){
 	  return sqLiteDatabase.delete(MYDATABASE_TABLE_CATEGORY, null, null);

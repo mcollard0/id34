@@ -125,6 +125,12 @@ public class Iserver {
 	// this should be a private function but it is used in class, new use should use getstring from remote
 	public static String getStringFromRemote(String link, Context context) { //legacy
 			Log.d(LOG_TAG,"Getting:" + link);
+			
+			// CRASH FIX: Handle local:// URLs for offline mode
+			if (link != null && link.startsWith("local://")) {
+				Log.i(LOG_TAG, "OFFLINE MODE: Returning empty response for local URL: " + link);
+				return ""; // Return empty string for local URLs to prevent network calls
+			}
 	       String dataReceived = "";
 	       ConnectivityManager connec =  (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
 	           if (connec.getNetworkInfo(0).isConnected() || connec.getNetworkInfo(1).isConnected()){

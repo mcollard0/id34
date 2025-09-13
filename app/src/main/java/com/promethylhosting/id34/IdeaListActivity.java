@@ -9,8 +9,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v4.app.FragmentActivity;
-import android.support.v4.app.NavUtils;
+import android.app.Activity;
+import android.content.Intent;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.MenuItem;
@@ -20,11 +20,11 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.google.android.gcm.GCMRegistrar;
+// import com.google.android.gcm.GCMRegistrar; // Disabled for minimal build
 
 import java.util.ArrayList;
 
-public class IdeaListActivity extends FragmentActivity
+public class IdeaListActivity extends Activity
         implements IdeaListFragment.Callbacks {
 
 	private String mEmailAddress="";
@@ -52,13 +52,13 @@ public class IdeaListActivity extends FragmentActivity
 
         if (findViewById(R.id.idea_detail_container) != null) {
             mTwoPane = true;
-            ((IdeaListFragment) getSupportFragmentManager()
+            ((IdeaListFragment) getFragmentManager()
                     .findFragmentById(R.id.idea_list))
                     .setActivateOnItemClick(true);
             
             IdeaListFragment fragListItem = new IdeaListFragment();
             fragListItem.setArguments(getIntent().getExtras())            ;
-            getSupportFragmentManager().beginTransaction().add(R.id.idea_list, fragListItem).commit();
+            getFragmentManager().beginTransaction().add(R.id.idea_list, fragListItem).commit();
         }
     }
 
@@ -165,22 +165,25 @@ public class IdeaListActivity extends FragmentActivity
 
     public void GCM_reregister() { // do this if we don't have it in the server database ... if users gets sync..d... hrm. security problem. Only sync the master user.
     	// TODO: REMOVE
-    	GCMRegistrar.unregister(this); // RMOVE ME!
+    	// GCMRegistrar.unregister(this); // DISABLED for minimal build
     	GCM_register();
     }
     
     // register on the GCM cloud for updates
     public void GCM_register() {
     	Log.i(LOG_TAG, "GCM REgister");
-    	if (bDebug) GCMRegistrar.checkDevice(this); // check to make sure device supports GCM, not emulator 
-    	if (bDebug) GCMRegistrar.checkManifest(this); // checks to make sure manifest is set up properly.
+    	// GCM functionality disabled for minimal build
+    	// if (bDebug) GCMRegistrar.checkDevice(this);
+    	// if (bDebug) GCMRegistrar.checkManifest(this);
     	
-        final String regId = GCMRegistrar.getRegistrationId(this);
-        if (regId.equals("")) {
-          GCMRegistrar.register(this, SENDER_ID);
-        } else {
-          Log.v(LOG_TAG, "Already registered " + regId );
-        }
+        // final String regId = GCMRegistrar.getRegistrationId(this);
+        // if (regId.equals("")) {
+        //   GCMRegistrar.register(this, SENDER_ID);
+        // } else {
+        //   Log.v(LOG_TAG, "Already registered " + regId );
+        // }
+        
+        Log.i(LOG_TAG, "GCM registration disabled for minimal build");
 
     }
     
@@ -212,7 +215,8 @@ public class IdeaListActivity extends FragmentActivity
     	Log.i(LOG_TAG, "Activity Menu item selected: " + item.getTitle());
         switch (item.getItemId()) {
             case android.R.id.home:
-                NavUtils.navigateUpFromSameTask(this);
+                // NavUtils.navigateUpFromSameTask(this); // Disabled for minimal build
+                finish(); // Simple back navigation
                 return true;
         }
         
@@ -235,7 +239,7 @@ public class IdeaListActivity extends FragmentActivity
             arguments.putString(IdeaDetailFragment.ARG_ITEM_ID, id);
             IdeaDetailFragment fragment = new IdeaDetailFragment();
             fragment.setArguments(arguments);
-            getSupportFragmentManager().beginTransaction()
+            getFragmentManager().beginTransaction()
                     .replace(R.id.idea_detail_container, fragment)
                     .commit();
 
