@@ -82,7 +82,7 @@ public class SQLCipherAdapter {
 
 	 private static Context context;
 	 
-	 public SQLiteAdapter(Context c){
+	 public SQLCipherAdapter(Context c){
 	  context = c;
 	  
 	    Thread iserverinit = new Thread() {
@@ -99,13 +99,13 @@ public class SQLCipherAdapter {
 	    iserverinit.start();
 	 }
 	 
-	 public SQLiteAdapter openToRead() throws android.database.SQLException {
+	 public SQLCipherAdapter openToRead() throws android.database.SQLException {
 	  sqLiteHelper = new SQLiteHelper(context, MYDATABASE_NAME, null, MYDATABASE_VERSION);
 	  sqLiteDatabase = sqLiteHelper.getReadableDatabase();
 	  return this; 
 	 }
 	 
-	 public SQLiteAdapter openToWrite() throws android.database.SQLException {
+	 public SQLCipherAdapter openToWrite() throws android.database.SQLException {
 	  sqLiteHelper = new SQLiteHelper(context, MYDATABASE_NAME, null, MYDATABASE_VERSION);
 	  sqLiteDatabase = sqLiteHelper.getWritableDatabase();
 	  return this; 
