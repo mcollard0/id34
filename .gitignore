@@ -12,9 +12,10 @@ build/
 *.iml
 local.properties
 
-# APK Files
+# APK Files (except in releases/)
 *.apk
 *.ap_
+!releases/*.apk
 
 # Backup Files
 backup/
