@@ -116,12 +116,13 @@ public class IdeaAddActivity extends Activity {
 	    String[] strArray = new String[c.getCount()];
 	    c.moveToFirst();
 	    
-	    for (int i=0;i<c.getCount();i++) {
-	    	c.moveToNext();
-	    	strArray[i]="#" + c.getString(1);
-	    	Log.i(LOG_TAG, strArray[i]);
-	    	i=i+1;
-	    } 
+    for (int i=0;i<c.getCount();i++) {
+    	strArray[i]="#" + c.getString(1);
+    	Log.i(LOG_TAG, strArray[i]);
+    	if (i < c.getCount() - 1) {
+    		c.moveToNext();
+    	}
+    }
 	    aaStr = new ArrayAdapter<String>(this,android.R.layout.simple_dropdown_item_1line, strArray);
 	    
 	    //multiAutoCompleteTextView1.setAdapter(aaStr);
@@ -208,27 +209,45 @@ public class IdeaAddActivity extends Activity {
 
 		@Override
 		protected Void doInBackground(Void... params) {
-			// TODO Auto-generated method stub
-			//Iserver Iserver = new Iserver(context); 
+			// OFFLINE MODE: Save directly to local SQLCipher database
 			Iserver.init(context);
-			//Editable text = multiAutoCompleteTextView1.getText();
-			String text="";
-		     try {
-					text = URLEncoder.encode(multiAutoCompleteTextView1.getText().toString(), "UTF-8").toString();
-				} catch (UnsupportedEncodingException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} // this might fix some encoding issues
 			
-			Log.d(LOG_TAG, "AsyncTask : pulling data from url: " + text + "");
-			String result  = Iserver.getStringFromRemote("Body=" + text);
-			Toast(result);
-
-			context.startService(new Intent(context, ServerInteractionService.class)); // process data
-
-			if (text.contains("#twitter") || text.contains("#tweet"))  { postTwitter(text); }
+			// Get the raw text (no URL encoding needed for local storage)
+			String text = multiAutoCompleteTextView1.getText().toString().trim();
 			
-			returnToIdeaList() ;
+			if (text.isEmpty()) {
+				Log.w(LOG_TAG, "Empty idea text, not saving");
+				Toast("Please enter some text to save");
+				return null;
+			}
+			
+			Log.d(LOG_TAG, "OFFLINE MODE: Saving idea to local database: " + text);
+			
+			// Save to local SQLCipher database
+			try {
+				SQLCipherAdapter sql = new SQLCipherAdapter(context);
+				long savedId = sql.saveIdeaLocal(text);
+				
+				if (savedId > 0) {
+					Toast("Idea saved successfully! ID: " + savedId);
+					Log.i(LOG_TAG, "OFFLINE MODE: Idea saved successfully with ID: " + savedId);
+				} else {
+					Toast("Failed to save idea");
+					Log.e(LOG_TAG, "Failed to save idea to local database");
+				}
+			} catch (Exception e) {
+				Log.e(LOG_TAG, "Error saving idea: " + e.getMessage());
+				Toast("Error saving idea: " + e.getMessage());
+				e.printStackTrace();
+			}
+
+			// Handle Twitter posting if requested
+			if (text.contains("#twitter") || text.contains("#tweet")) {
+				postTwitter(text);
+			}
+			
+			// Return to idea list to show updated data
+			returnToIdeaList();
 			return null;
 		}
 	}

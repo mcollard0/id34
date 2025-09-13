@@ -190,7 +190,28 @@ public class IdeaListActivity extends Activity
     @Override
     public void onResume() {
     	    super.onResume(); 
-    	  
+    	    
+    	    // Run migration once to fix existing ideas with missing category links
+    	    SharedPreferences prefs = getSharedPreferences("com.promethylhosting.id34", MODE_PRIVATE);
+    	    boolean migrationCompleted = prefs.getBoolean("migration_v1_completed", false);
+    	    
+    	    if (!migrationCompleted) {
+    	        new Thread(new Runnable() {
+    	            @Override
+    	            public void run() {
+    	                try {
+    	                    SQLCipherAdapter sql = new SQLCipherAdapter(context);
+    	                    sql.migrateExistingIdeasToCategories();
+    	                    
+    	                    // Mark migration as completed
+    	                    SharedPreferences prefs = getSharedPreferences("com.promethylhosting.id34", MODE_PRIVATE);
+    	                    prefs.edit().putBoolean("migration_v1_completed", true).apply();
+    	                } catch (Exception e) {
+    	                    Log.e("Id34", "Migration error: " + e.getMessage());
+    	                }
+    	            }
+    	        }).start();
+    	    }
     	
     	//getData();
     }

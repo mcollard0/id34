@@ -269,21 +269,231 @@ public class SQLCipherAdapter {
   return sqLiteDatabase.insert(MYDATABASE_TABLE_CATEGORY, null, contentValues);
  }
  
- // Add demo item if database is empty
- public void createDemoItemIfEmpty() {
+// Add demo item if database is empty
+public void createDemoItemIfEmpty() {
+    try {
+        Log.i(LOG_TAG, "Checking if demo item needed...");
+        Cursor cursor = queryCats();
+        if (cursor == null || cursor.getCount() == 0) {
+            Log.i(LOG_TAG, "Database empty, creating demo item");
+            insert("Test Item #id34");
+            Log.i(LOG_TAG, "Demo item created: Test Item #id34");
+        } else {
+            Log.i(LOG_TAG, "Database has " + cursor.getCount() + " items, no demo needed");
+        }
+        if (cursor != null) cursor.close();
+    } catch (Exception e) {
+        Log.e(LOG_TAG, "Error creating demo item: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+
+// Migrate existing ideas to link them with categories based on hashtags in their text
+public void migrateExistingIdeasToCategories() {
+    try {
+        Log.i(LOG_TAG, "MIGRATION: Starting migration of existing ideas to categories...");
+        openToWrite();
+        
+        // Find all ideas with CID0=0 (not linked to categories)
+        Cursor cursor = sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, 
+            new String[]{KEY_ID, KEY_NAME}, 
+            KEY_CID0 + " = ?", new String[]{"0"}, 
+            null, null, null);
+            
+        Log.i(LOG_TAG, "MIGRATION: Found " + cursor.getCount() + " ideas to migrate");
+        
+        if (cursor.getCount() > 0) {
+            cursor.moveToFirst();
+            do {
+                String ideaId = cursor.getString(0);
+                String ideaText = cursor.getString(1);
+                
+                Log.i(LOG_TAG, "MIGRATION: Processing idea ID " + ideaId + ": " + ideaText);
+                
+                // Extract categories and get their IDs
+                java.util.List<String> categoryIds = extractAndSaveCategoriesWithIds(ideaText);
+                
+                if (categoryIds.size() > 0) {
+                    // Update the idea with category IDs
+                    ContentValues contentValues = new ContentValues();
+                    contentValues.put(KEY_CID0, categoryIds.size() > 0 ? Integer.parseInt(categoryIds.get(0)) : 0);
+                    contentValues.put(KEY_CID1, categoryIds.size() > 1 ? Integer.parseInt(categoryIds.get(1)) : 0);
+                    contentValues.put(KEY_CID2, categoryIds.size() > 2 ? Integer.parseInt(categoryIds.get(2)) : 0);
+                    contentValues.put(KEY_CID3, categoryIds.size() > 3 ? Integer.parseInt(categoryIds.get(3)) : 0);
+                    contentValues.put(KEY_CID4, categoryIds.size() > 4 ? Integer.parseInt(categoryIds.get(4)) : 0);
+                    
+                    int updatedRows = sqLiteDatabase.update(MYDATABASE_TABLE_IDEA, contentValues, 
+                        KEY_ID + "=?", new String[]{ideaId});
+                        
+                    Log.i(LOG_TAG, "MIGRATION: Updated idea " + ideaId + " with categories: " + categoryIds + " (" + updatedRows + " rows)");
+                } else {
+                    Log.w(LOG_TAG, "MIGRATION: No categories found for idea " + ideaId);
+                }
+                
+            } while (cursor.moveToNext());
+        }
+        
+        cursor.close();
+        Log.i(LOG_TAG, "MIGRATION: Migration completed successfully");
+        // Note: Don't close the database here as it may be needed by other threads
+        
+    } catch (Exception e) {
+        Log.e(LOG_TAG, "MIGRATION: Error during migration: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+ 
+// Save new idea directly to local database
+public long saveIdeaLocal(String ideaText) {
+    try {
+        Log.i(LOG_TAG, "OFFLINE MODE: Saving idea to local database: " + ideaText);
+        openToWrite();
+        
+        // First extract and save hashtags as categories to get their IDs
+        java.util.List<String> categoryIds = extractAndSaveCategoriesWithIds(ideaText);
+        
+        // Generate a unique ID (using timestamp + random)
+        long uniqueId = System.currentTimeMillis() % 100000000; // Keep within 8 digits
+        String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
+        String defaultTimestamp = "1970-01-01 06:00:00";
+        
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KEY_ID, uniqueId); // Required PRIMARY KEY
+        contentValues.put(KEY_NAME, ideaText);
+        contentValues.put(KEY_CREATED, timestamp);
+        contentValues.put(KEY_UPDATED, timestamp);
+        contentValues.put(KEY_REMINDER, defaultTimestamp); // Required NOT NULL field
+        contentValues.put(KEY_UID, 1); // Required NOT NULL field  
+        contentValues.put(KEY_NUM, 0); // Required NOT NULL field
+        
+        // Set category IDs in CID columns (up to 5 categories supported)
+        contentValues.put(KEY_CID0, categoryIds.size() > 0 ? Integer.parseInt(categoryIds.get(0)) : 0);
+        contentValues.put(KEY_CID1, categoryIds.size() > 1 ? Integer.parseInt(categoryIds.get(1)) : 0);
+        contentValues.put(KEY_CID2, categoryIds.size() > 2 ? Integer.parseInt(categoryIds.get(2)) : 0);
+        contentValues.put(KEY_CID3, categoryIds.size() > 3 ? Integer.parseInt(categoryIds.get(3)) : 0);
+        contentValues.put(KEY_CID4, categoryIds.size() > 4 ? Integer.parseInt(categoryIds.get(4)) : 0);
+        
+        contentValues.put(KEY_DELETED, 0); // 0 = false
+        contentValues.put(KEY_COMPLETED, 0); // 0 = false
+        
+        long result = sqLiteDatabase.insert(MYDATABASE_TABLE_IDEA, null, contentValues);
+        Log.i(LOG_TAG, "OFFLINE MODE: Idea saved with ID: " + result + " (uniqueId: " + uniqueId + ") linked to categories: " + categoryIds);
+        
+        close();
+        return result;
+        
+    } catch (Exception e) {
+        Log.e(LOG_TAG, "Error saving idea locally: " + e.getMessage());
+        e.printStackTrace();
+        return -1;
+    }
+}
+ 
+// Extract hashtags from idea text and save them as categories, returning their IDs
+private java.util.List<String> extractAndSaveCategoriesWithIds(String ideaText) {
+    java.util.List<String> categoryIds = new java.util.ArrayList<String>();
+    try {
+        Log.i(LOG_TAG, "OFFLINE MODE: Extracting categories from: " + ideaText);
+        
+        // Find all hashtags (words starting with #)
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("#\\w+");
+        java.util.regex.Matcher matcher = pattern.matcher(ideaText);
+        
+        java.util.Set<String> categories = new java.util.HashSet<String>();
+        
+        while (matcher.find()) {
+            String hashtag = matcher.group().substring(1); // Remove the # symbol
+            categories.add(hashtag);
+            Log.i(LOG_TAG, "Found hashtag: #" + hashtag);
+        }
+        
+        // If no hashtags found, create a general category
+        if (categories.isEmpty()) {
+            categories.add("General");
+            Log.i(LOG_TAG, "No hashtags found, using General category");
+        }
+        
+        // Save each unique category and collect their IDs
+        for (String category : categories) {
+            saveCategoryIfNotExists(category);
+            String categoryId = getCatIdFromCatName(category);
+            if (!categoryId.equals("-1")) {
+                categoryIds.add(categoryId);
+                Log.i(LOG_TAG, "Category '" + category + "' has ID: " + categoryId);
+            }
+        }
+        
+    } catch (Exception e) {
+        Log.e(LOG_TAG, "Error extracting categories: " + e.getMessage());
+        e.printStackTrace();
+    }
+    return categoryIds;
+}
+
+// Extract hashtags from idea text and save them as categories
+private void extractAndSaveCategories(String ideaText) {
+    try {
+        Log.i(LOG_TAG, "OFFLINE MODE: Extracting categories from: " + ideaText);
+        
+        // Find all hashtags (words starting with #)
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("#\\w+");
+        java.util.regex.Matcher matcher = pattern.matcher(ideaText);
+        
+        java.util.Set<String> categories = new java.util.HashSet<String>();
+        
+        while (matcher.find()) {
+            String hashtag = matcher.group().substring(1); // Remove the # symbol
+            categories.add(hashtag);
+            Log.i(LOG_TAG, "Found hashtag: #" + hashtag);
+        }
+        
+        // If no hashtags found, create a general category
+        if (categories.isEmpty()) {
+            categories.add("General");
+            Log.i(LOG_TAG, "No hashtags found, using General category");
+        }
+        
+        // Save each unique category
+        for (String category : categories) {
+            saveCategoryIfNotExists(category);
+        }
+        
+    } catch (Exception e) {
+        Log.e(LOG_TAG, "Error extracting categories: " + e.getMessage());
+        e.printStackTrace();
+    }
+}
+ 
+ // Save category to database if it doesn't already exist
+ private void saveCategoryIfNotExists(String categoryName) {
      try {
-         Log.i(LOG_TAG, "Checking if demo item needed...");
-         Cursor cursor = queryCats();
-         if (cursor == null || cursor.getCount() == 0) {
-             Log.i(LOG_TAG, "Database empty, creating demo item");
-             insert("Test Item #id34");
-             Log.i(LOG_TAG, "Demo item created: Test Item #id34");
+         // Check if category already exists
+         Cursor cursor = sqLiteDatabase.query(MYDATABASE_TABLE_CATEGORY, 
+             new String[]{KEY_ID}, KEY_CAT + "=?", new String[]{categoryName}, 
+             null, null, null);
+             
+         if (cursor.getCount() == 0) {
+             // Category doesn't exist, create it
+             long catId = System.currentTimeMillis() % 100000000; // Unique ID
+             String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
+             
+             ContentValues catValues = new ContentValues();
+             catValues.put(KEY_ID, catId);
+             catValues.put(KEY_CAT, categoryName);
+             catValues.put(KEY_UID, 1);
+             catValues.put(KEY_NUM, 0);
+             catValues.put(KEY_UPDATED, timestamp);
+             
+             long result = sqLiteDatabase.insert(MYDATABASE_TABLE_CATEGORY, null, catValues);
+             Log.i(LOG_TAG, "OFFLINE MODE: Category saved: " + categoryName + " with ID: " + result);
          } else {
-             Log.i(LOG_TAG, "Database has " + cursor.getCount() + " items, no demo needed");
+             Log.i(LOG_TAG, "Category already exists: " + categoryName);
          }
-         if (cursor != null) cursor.close();
+         
+         cursor.close();
+         
      } catch (Exception e) {
-         Log.e(LOG_TAG, "Error creating demo item: " + e.getMessage());
+         Log.e(LOG_TAG, "Error saving category " + categoryName + ": " + e.getMessage());
          e.printStackTrace();
      }
  }
@@ -352,8 +562,35 @@ public class SQLCipherAdapter {
 						  KEY_CID4 + " = ?) AND deleted = ?";
 		  String[] selectionArgs = new String[]{catid, catid, catid, catid, catid, strDeleted01};
 		  
-		  return sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, columns, 
+		  Log.i(LOG_TAG, "DEBUG QUERY: " + selection + " with args: [" + catid + "," + catid + "," + catid + "," + catid + "," + catid + "," + strDeleted01 + "]");
+		  
+		  Cursor cursor = sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, columns, 
 				  selection, selectionArgs, null, null, null);
+		  
+		  Log.i(LOG_TAG, "QUERY RESULT: Found " + cursor.getCount() + " ideas for category '" + strCatName + "' (ID: " + catid + ")");
+		  
+		  // Debug: Show what we found
+		  if (cursor.getCount() > 0) {
+			  cursor.moveToFirst();
+			  do {
+				  Log.i(LOG_TAG, "Found idea: " + cursor.getString(cursor.getColumnIndex(KEY_NAME)));
+			  } while (cursor.moveToNext());
+			  cursor.moveToFirst(); // Reset cursor position
+		  } else {
+			  Log.w(LOG_TAG, "No ideas found for category " + strCatName + " - checking if ideas exist at all...");
+			  // Debug: Check if any ideas exist
+			  Cursor debugCursor = sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, new String[]{KEY_ID, KEY_NAME, KEY_CID0, KEY_CID1, KEY_CID2, KEY_CID3, KEY_CID4}, null, null, null, null, null);
+			  Log.i(LOG_TAG, "Total ideas in database: " + debugCursor.getCount());
+			  if (debugCursor.getCount() > 0) {
+				  debugCursor.moveToFirst();
+				  do {
+					  Log.i(LOG_TAG, "Idea ID: " + debugCursor.getInt(0) + " Name: " + debugCursor.getString(1) + " CIDs: [" + debugCursor.getInt(2) + "," + debugCursor.getInt(3) + "," + debugCursor.getInt(4) + "," + debugCursor.getInt(5) + "," + debugCursor.getInt(6) + "]");
+				  } while (debugCursor.moveToNext());
+			  }
+			  debugCursor.close();
+		  }
+		  
+		  return cursor;
 		
 	}
 
