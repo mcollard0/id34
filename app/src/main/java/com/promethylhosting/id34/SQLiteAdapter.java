@@ -315,7 +315,7 @@ public class SQLiteAdapter {
 	 }
 
 	public Cursor queryIdeasByCatName(String strCatName) {
-		// TODO Auto-generated method stub
+		// Fixed SQL injection vulnerability - using parameterized queries
 		  String[] columns = new String[]{KEY_ID + " _id",  KEY_NAME, KEY_COMPLETED, KEY_DELETED};
 		  
 		  String catid = getCatIdFromCatName(strCatName);
@@ -325,12 +325,16 @@ public class SQLiteAdapter {
 		  String strDeleted01 = "0";
 		  String strCompleted01 = "0";
 		  
+		  // Use parameterized query to prevent SQL injection
+		  String selection = "(" + KEY_CID0 + " = ? OR " +  
+						  KEY_CID1 + " = ? OR " + 
+						  KEY_CID2 + " = ? OR " + 
+						  KEY_CID3 + " = ? OR " + 
+						  KEY_CID4 + " = ?) AND deleted = ?";
+		  String[] selectionArgs = new String[]{catid, catid, catid, catid, catid, strDeleted01};
+		  
 		  return sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, columns, 
-				  "(" + KEY_CID0 + " = " + catid + " or " +  
-						  KEY_CID1 + " = " + catid + " or " + 
-						  KEY_CID2 + " = " + catid + " or " + 
-						  KEY_CID3 + " = " + catid + " or " + 
-						  KEY_CID4 + " = " + catid + ") and deleted=" + strDeleted01, null, null, null, null);
+				  selection, selectionArgs, null, null, null);
 		
 	}
 

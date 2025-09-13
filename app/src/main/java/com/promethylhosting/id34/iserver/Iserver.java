@@ -72,7 +72,7 @@ public class Iserver {
         //~! Add GCMRegID here:
         gcmRegID = prefs.getString("gcmRegID", "");
         
-		baseurl = getStringFromRemote("http://id34.info/converse.php?aa=alcoholics&uid_gcm="+gcmRegID+"&From="+mPhoneNumber+"&Body=sendpage", context);
+		baseurl = getStringFromRemote("https://id34.info/converse.php?aa=alcoholics&uid_gcm="+gcmRegID+"&From="+mPhoneNumber+"&Body=sendpage", context);
 		Log.i(LOG_TAG, "New base url " + baseurl);
 
 		if (mPhoneNumber == null | baseurl==null | baseurl.length()<5) {
@@ -90,7 +90,7 @@ public class Iserver {
 	
 	public static String getServerDateTime() {
 		// TODO Auto-generated method stub
-		return getStringFromRemote("http://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=!getdatetime", context);
+	return getStringFromRemote("https://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=!getdatetime", context);
 	}
 
 	

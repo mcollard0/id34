@@ -237,9 +237,9 @@ public class IdeaAddActivity extends Activity {
 public static final String CONSUMER_KEY = "**REDACTED**"; // See .secrets file for actual credentials
 	public static final String CONSUMER_SECRET= "**REDACTED**"; // See .secrets file for actual credentials
 
-	public static final String REQUEST_URL = "http://api.twitter.com/oauth/request_token";
-	public static final String ACCESS_URL = "http://api.twitter.com/oauth/access_token";
-	public static final String AUTHORIZE_URL = "http://api.twitter.com/oauth/authorize";
+	public static final String REQUEST_URL = "https://api.twitter.com/oauth/request_token";
+	public static final String ACCESS_URL = "https://api.twitter.com/oauth/access_token";
+	public static final String AUTHORIZE_URL = "https://api.twitter.com/oauth/authorize";
 
 	final public static String	CALLBACK_SCHEME = "x-latify-oauth-twitter";
 	final public static String	CALLBACK_URL = CALLBACK_SCHEME + "://callback";
@@ -248,7 +248,7 @@ public static final String CONSUMER_KEY = "**REDACTED**"; // See .secrets file f
 	private void postTwitter (final String textUpdate) {
 		/*
 		* Consumer Key (API Key)	**REDACTED** (See .secrets file - manage keys and access tokens)
-Callback URL	http://promethylhosting.com/mobile/id34/twittercallback.php
+Callback URL	https://promethylhosting.com/mobile/id34/twittercallback.php
 Sign in with Twitter	Yes
 App-only authentication	https://api.twitter.com/oauth2/token
 Request token URL	https://api.twitter.com/oauth/request_token

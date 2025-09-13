@@ -331,7 +331,7 @@ public class IdeaListFragment extends ListFragment {
     
     public void getData(DummyContent dcHashTags) {
     	Log.e(LOG_TAG, "Defunct branch running. (I thought they ran out of funding? CodeGovt shutdown my arse.)");
-    	String link = "http://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=sendpage";
+    	String link = "https://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=sendpage";
     	new getStringFromRemoteTask().execute(link, dcHashTags);
     }
     
