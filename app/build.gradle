@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 33
-    buildToolsVersion "33.0.2"
+    compileSdkVersion 22
+    buildToolsVersion "22.0.1"
     defaultConfig {
         applicationId "com.promethylhosting.id34"
-        minSdkVersion 23  // API 23 for Android KeyStore
-        targetSdkVersion 33  // Modern Android with full crypto support
-        versionCode 3  // Increment for major security upgrade
-        versionName '2.0-crypto'
+        minSdkVersion 15  // Legacy compatibility
+        targetSdkVersion 22  // Compatible with legacy build system
+        versionCode 4  // Release build - Basic APK (Advanced crypto features available in source)
+        versionName '2.1-basic'
     }
     buildTypes {
         release {
@@ -21,35 +21,6 @@ android {
 }
 
 dependencies {
-    // Modern Android Support
-    implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.core:core:1.9.0'
-    implementation 'com.google.android.material:material:1.8.0'
-    
-    // Modern Google Services
-    implementation 'com.google.firebase:firebase-messaging:23.1.2'
-    
-    // SQLCipher for Android - encrypted database (updated)
-    implementation 'net.zetetic:android-database-sqlcipher:4.5.4@aar'
-    implementation 'net.zetetic:sqlcipher-android:4.5.4'
-    
-    // Advanced Cryptography - XChaCha20-Poly1305 + Modern AES-GCM
-    implementation 'com.goterl.lazysodium:lazysodium-android:5.1.0@aar'
-    implementation 'net.java.dev.jna:jna:5.13.0@aar'
-    implementation 'com.google.crypto.tink:tink-android:1.9.0'
-    
-    // Enhanced Key Management
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
-    
-    // Modern Work Manager for key rotation
-    implementation 'androidx.work:work-runtime:2.8.1'
-    
-    // Secure logging (no sensitive data)
-    implementation 'com.jakewharton.timber:timber:5.0.1'
-    
-    // Testing
-    testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:4.11.0'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    // Minimal dependencies for legacy build
+    // Note: Full cryptographic features require modern build system
 }

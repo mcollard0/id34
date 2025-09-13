@@ -246,21 +246,77 @@ public static final String CONSUMER_KEY = "**REDACTED**"; // See .secrets file f
 	final public static boolean bTwitterOAuthorized=false; // whether twitter has been authorized before this user
 
 	private void postTwitter (final String textUpdate) {
-		// Twitter functionality disabled for basic APK build
-		Log.i(LOG_TAG, "Twitter posting not available in basic build: " + textUpdate);
-		Toast("Twitter posting not available in basic build");
+		/*
+		* Consumer Key (API Key)	**REDACTED** (See .secrets file - manage keys and access tokens)
+Callback URL	https://promethylhosting.com/mobile/id34/twittercallback.php
+Sign in with Twitter	Yes
+App-only authentication	https://api.twitter.com/oauth2/token
+Request token URL	https://api.twitter.com/oauth/request_token
+Authorize URL	https://api.twitter.com/oauth/authorize
+Access token URL	https://api.twitter.com/oauth/access_token
+
+Consumer Key (API Key)	**REDACTED**
+Consumer Secret (API Secret)	**REDACTED**
+		* */
+
+	if (!bTwitterOAuthorized) { bTwitterMessagePending=true; sTwitterMessagePending = textUpdate; getTwitterOAuth(); return; }
+
+	Thread t = new Thread() {
+		public void run() {
+			try {
+					String token = prefs.getString(OAuth.OAUTH_TOKEN, "");
+					String secret = prefs.getString(OAuth.OAUTH_TOKEN_SECRET, "");
+
+					AccessToken accTok = new AccessToken(token,secret);
+					Twitter twitter = new TwitterFactory().getInstance();
+					twitter.setOAuthConsumer(CONSUMER_KEY, CONSUMER_SECRET);
+					twitter.setOAuthAccessToken(accTok);
+					twitter.updateStatus(textUpdate);
+				}
+
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+
+	};
+	t.start();
+
+
+
 	}
 
 	private boolean getTwitterOAuth() {
-		// Twitter OAuth functionality disabled for basic APK build
-		Log.i(TAG, "Twitter OAuth not available in basic build");
-		return false;
+		@Override
+		protected Void doInBackground(Void... params) {
+
+			try {
+				Log.i(TAG, "Retrieving request token from Google servers");
+				final String url = provider.retrieveRequestToken(consumer, OAUTH_CALLBACK_URL);
+				Log.i(TAG, "Popping a browser with the authorize URL : " + url);
+				Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url)).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NO_HISTORY | Intent.FLAG_FROM_BACKGROUND);
+				context.startActivity(intent);
+			} catch (Exception e) {
+				Log.e(TAG, "Error during OAUth retrieve request token", e);
+			}
+
+			return null;
+		}
+
+
 	}
 
 	@Override
 	public void onNewIntent(Intent intent) {
 		super.onNewIntent(intent);
-		// OAuth callback handling disabled for basic APK build
+
+		final Uri uri = intent.getData();
+		if (uri != null && uri.getScheme().equals(Constants.OAUTH_CALLBACK_SCHEME)) {
+			Log.i(TAG, "Callback received : " + uri);
+			Log.i(TAG, "Retrieving Access Token");
+			new RetrieveAccessTokenTask(this,consumer,provider,prefs).execute(uri);
+			finish();
+		}
 	}
 
 
