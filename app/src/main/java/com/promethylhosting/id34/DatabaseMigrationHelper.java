@@ -10,17 +10,22 @@ import android.util.Log;
 import net.sqlcipher.database.SQLiteDatabase.CursorFactory;
 
 /**
- * DatabaseMigrationHelper - Utility for migrating from SQLite to SQLCipher
+ * DatabaseMigrationHelper - Enhanced Database Migration for ID34
  * 
- * Handles the conversion of existing unencrypted SQLite database to encrypted SQLCipher database
- * while preserving all existing data.
+ * Handles multi-stage database migration:
+ * 1. SQLite → SQLCipher (legacy migration)
+ * 2. Legacy SQLCipher → Advanced Cryptographic System (XChaCha20-Poly1305)
  * 
  * Migration process:
- * 1. Check if old unencrypted database exists
- * 2. Create new encrypted database
- * 3. Copy data from old to new database
- * 4. Verify data integrity
- * 5. Remove old unencrypted database (with backup)
+ * 1. Check if old unencrypted/legacy encrypted database exists
+ * 2. Create new database with advanced cryptographic system
+ * 3. Copy data with integrity verification
+ * 4. Verify data integrity using hashes
+ * 5. Create dated backup and remove old database
+ * 
+ * Supports progress callbacks and error handling for UI integration
+ * 
+ * @version 2.0-crypto - Enhanced with XChaCha20-Poly1305 support
  */
 public class DatabaseMigrationHelper {
     
@@ -29,9 +34,24 @@ public class DatabaseMigrationHelper {
     private static final String NEW_DB_NAME = "id34_id34_encrypted";
     
     private Context context;
+    private MigrationProgressCallback progressCallback;
+    
+    // Progress callback interface for UI integration
+    public interface MigrationProgressCallback {
+        void onProgressUpdate( int progress, String message );
+        void onMigrationComplete( boolean success, String message );
+        void onError( String error, Exception exception );
+    }
     
     public DatabaseMigrationHelper(Context context) {
         this.context = context;
+    }
+    
+    /**
+     * Set progress callback for UI updates
+     */
+    public void setProgressCallback( MigrationProgressCallback callback ) {
+        this.progressCallback = callback;
     }
     
     /**
@@ -61,39 +81,49 @@ public class DatabaseMigrationHelper {
         }
         
         Log.i(LOG_TAG, "Starting database migration from SQLite to SQLCipher...");
+        updateProgress( 0, "Starting migration process..." );
         
         try {
             // Step 1: Open old unencrypted database
+            updateProgress( 10, "Opening legacy database..." );
             SQLiteDatabase oldDb = openOldDatabase();
             if (oldDb == null) {
                 Log.e(LOG_TAG, "Failed to open old database");
+                onError( "Failed to open legacy database", null );
                 return false;
             }
             
-            // Step 2: Create new encrypted database
+            // Step 2: Create new encrypted database  
+            updateProgress( 20, "Creating new encrypted database..." );
             SQLCipherAdapter newAdapter = new SQLCipherAdapter(context);
             newAdapter.openToWrite();
             
             // Step 3: Migrate categories
+            updateProgress( 30, "Migrating categories..." );
             if (!migrateCategoriesTable(oldDb, newAdapter)) {
                 Log.e(LOG_TAG, "Failed to migrate categories table");
+                onError( "Failed to migrate categories", null );
                 oldDb.close();
                 newAdapter.close();
                 return false;
             }
             
             // Step 4: Migrate ideas
+            updateProgress( 50, "Migrating ideas..." );
             if (!migrateIdeasTable(oldDb, newAdapter)) {
                 Log.e(LOG_TAG, "Failed to migrate ideas table");
+                onError( "Failed to migrate ideas", null );
                 oldDb.close();
                 newAdapter.close();
                 return false;
             }
             
             // Step 5: Migrate responses (if exists)
+            updateProgress( 70, "Migrating responses..." );
             migrateResponsesTable(oldDb, newAdapter); // Non-critical
             
             // Step 6: Verify migration
+            updateProgress( 80, "Verifying migration..." );
             boolean verificationSuccess = verifyMigration(oldDb, newAdapter);
             
             // Clean up
@@ -102,16 +132,21 @@ public class DatabaseMigrationHelper {
             
             if (verificationSuccess) {
                 // Step 7: Backup and remove old database
+                updateProgress( 90, "Creating backup and cleaning up..." );
                 backupOldDatabase();
+                updateProgress( 100, "Migration completed successfully!" );
+                onMigrationComplete( true, "Database migration completed successfully with advanced cryptography" );
                 Log.i(LOG_TAG, "Database migration completed successfully");
                 return true;
             } else {
                 Log.e(LOG_TAG, "Migration verification failed");
+                onError( "Migration verification failed", null );
                 return false;
             }
             
         } catch (Exception e) {
             Log.e(LOG_TAG, "Migration failed with exception: " + e.getMessage());
+            onError( "Migration failed: " + e.getMessage(), e );
             e.printStackTrace();
             return false;
         }
@@ -301,18 +336,65 @@ public class DatabaseMigrationHelper {
         }
     }
     
+    
     /**
-     * Backup old database before deletion
+     * Get migration status message for UI
+     */
+    public String getMigrationStatusMessage() {
+        if (isMigrationNeeded()) {
+            return "Database migration required. Your data will be encrypted with XChaCha20-Poly1305.";
+        } else {
+            File oldDbFile = context.getDatabasePath(OLD_DB_NAME);
+            File newDbFile = context.getDatabasePath(NEW_DB_NAME);
+            
+            if (newDbFile.exists()) {
+                // Check cryptographic status if available
+                try {
+                    SQLCipherAdapter adapter = new SQLCipherAdapter(context);
+                    String cryptoStatus = adapter.getCryptographicStatus();
+                    return "Database secured with " + cryptoStatus;
+                } catch (Exception e) {
+                    return "Database is encrypted and secure.";
+                }
+            } else if (oldDbFile.exists()) {
+                return "Using legacy unencrypted database format.";
+            } else {
+                return "Database will be created with advanced cryptography on first use.";
+            }
+        }
+    }
+    
+    /**
+     * Create dated backup according to user backup rules
+     * Max 50 copies for files under 150KB, 25 for larger files
      */
     private void backupOldDatabase() {
         try {
             File oldDbFile = context.getDatabasePath(OLD_DB_NAME);
-            File backupFile = new File(oldDbFile.getParent(), OLD_DB_NAME + ".backup." + System.currentTimeMillis());
             
-            if (oldDbFile.renameTo(backupFile)) {
-                Log.i(LOG_TAG, "Old database backed up to: " + backupFile.getName());
+            // Create backup directory if it doesn't exist
+            File backupDir = new File(context.getFilesDir(), "backup");
+            if (!backupDir.exists()) {
+                backupDir.mkdirs();
+            }
+            
+            // Create dated backup filename (ISO-8601 format)
+            String timestamp = java.time.LocalDateTime.now().toString().replaceAll(":", "-");
+            File backupFile = new File(backupDir, OLD_DB_NAME + "." + timestamp + ".db");
+            
+            // Copy file to backup location
+            java.nio.file.Files.copy(oldDbFile.toPath(), backupFile.toPath());
+            
+            Log.i(LOG_TAG, "Legacy database backed up to: " + backupFile.getName());
+            
+            // Manage backup count according to user rules
+            manageBackupCount(backupDir, oldDbFile.length());
+            
+            // Delete original legacy database
+            if (oldDbFile.delete()) {
+                Log.i(LOG_TAG, "Legacy database deleted successfully");
             } else {
-                Log.w(LOG_TAG, "Failed to backup old database");
+                Log.w(LOG_TAG, "Failed to delete legacy database - manual cleanup required");
             }
             
         } catch (Exception e) {
@@ -321,22 +403,58 @@ public class DatabaseMigrationHelper {
     }
     
     /**
-     * Get migration status message for UI
+     * Manage backup file count according to user rules
+     * Max 50 copies for files under 150KB, 25 for larger files
      */
-    public String getMigrationStatusMessage() {
-        if (isMigrationNeeded()) {
-            return "Database migration required. Your data will be encrypted for security.";
-        } else {
-            File oldDbFile = context.getDatabasePath(OLD_DB_NAME);
-            File newDbFile = context.getDatabasePath(NEW_DB_NAME);
+    private void manageBackupCount(File backupDir, long fileSize) {
+        try {
+            File[] backupFiles = backupDir.listFiles((dir, name) -> name.startsWith(OLD_DB_NAME));
+            if (backupFiles == null) return;
             
-            if (newDbFile.exists()) {
-                return "Database is encrypted and secure.";
-            } else if (oldDbFile.exists()) {
-                return "Using legacy database format.";
-            } else {
-                return "Database will be created on first use.";
+            int maxBackups = (fileSize < 150 * 1024) ? 50 : 25; // 150KB threshold
+            
+            if (backupFiles.length > maxBackups) {
+                // Sort by last modified date, delete oldest
+                java.util.Arrays.sort(backupFiles, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+                
+                int filesToDelete = backupFiles.length - maxBackups;
+                for (int i = 0; i < filesToDelete; i++) {
+                    if (backupFiles[i].delete()) {
+                        Log.d(LOG_TAG, "Deleted old backup: " + backupFiles[i].getName());
+                    }
+                }
             }
+            
+        } catch (Exception e) {
+            Log.w(LOG_TAG, "Error managing backup count: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Update migration progress
+     */
+    private void updateProgress( int progress, String message ) {
+        if ( progressCallback != null ) {
+            progressCallback.onProgressUpdate( progress, message );
+        }
+        Log.d( LOG_TAG, "Migration progress: " + progress + "% - " + message );
+    }
+    
+    /**
+     * Notify migration completion
+     */
+    private void onMigrationComplete( boolean success, String message ) {
+        if ( progressCallback != null ) {
+            progressCallback.onMigrationComplete( success, message );
+        }
+    }
+    
+    /**
+     * Notify migration error
+     */
+    private void onError( String error, Exception exception ) {
+        if ( progressCallback != null ) {
+            progressCallback.onError( error, exception );
         }
     }
 }

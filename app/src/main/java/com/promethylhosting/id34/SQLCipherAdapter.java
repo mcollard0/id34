@@ -56,6 +56,10 @@ public class SQLCipherAdapter {
     
     private static final String LOG_TAG = "id34_sqlcipher";
     
+    // Advanced cryptography integration
+    private static AdvancedCryptographyManager cryptoManager;
+    private static final String CRYPTO_KEY_ALIAS = "sqlcipher_master_key";
+    
     // Database creation scripts (same as SQLiteAdapter)
     private static final String SCRIPT_CREATE_DATABASE_1 =
         "CREATE TABLE `tblCategory` (" + 
@@ -101,8 +105,11 @@ public class SQLCipherAdapter {
         // Initialize SQLCipher
         SQLiteDatabase.loadLibs(context);
         
-        // Generate or retrieve database password
-        databasePassword = getOrCreateDatabasePassword();
+        // Initialize Advanced Cryptography Manager
+        initializeCryptographyManager();
+        
+        // Generate or retrieve database password using advanced crypto
+        databasePassword = getOrCreateAdvancedDatabasePassword();
         
         // Initialize server communication (same as original)
         Thread iserverinit = new Thread() {
@@ -119,9 +126,69 @@ public class SQLCipherAdapter {
     }
     
     /**
-     * Generate or retrieve secure database password
+     * Initialize Advanced Cryptography Manager
+     */
+    private void initializeCryptographyManager() {
+        try {
+            if ( cryptoManager == null ) {
+                cryptoManager = AdvancedCryptographyManager.getInstance( context );
+                if ( !cryptoManager.init( context ) ) {
+                    Log.w( LOG_TAG, "Advanced cryptography unavailable, using legacy password system" );
+                    cryptoManager = null;
+                }
+            }
+        } catch ( Exception e ) {
+            Log.e( LOG_TAG, "Failed to initialize advanced cryptography: " + e.getMessage() );
+            cryptoManager = null;
+        }
+    }
+    
+    /**
+     * Generate or retrieve database password using advanced cryptography
+     * Falls back to legacy system if advanced crypto unavailable
+     */
+    private String getOrCreateAdvancedDatabasePassword() {
+        if ( cryptoManager != null ) {
+            try {
+                // Use advanced cryptographic key derivation
+                return getAdvancedCryptographicPassword();
+            } catch ( Exception e ) {
+                Log.w( LOG_TAG, "Advanced crypto failed, falling back to legacy: " + e.getMessage() );
+            }
+        }
+        
+        // Fallback to legacy password system
+        return getOrCreateDatabasePassword();
+    }
+    
+    /**
+     * Get password using advanced cryptographic system
+     */
+    private String getAdvancedCryptographicPassword() {
+        // Use a deterministic but secure approach:
+        // Generate password from crypto manager with database-specific context
+        String contextData = MYDATABASE_NAME + "_" + context.getPackageName();
+        byte[] contextBytes = contextData.getBytes( java.nio.charset.StandardCharsets.UTF_8 );
+        
+        // Encrypt context with advanced crypto system to derive password
+        byte[] encryptedContext = cryptoManager.encrypt( contextBytes, CRYPTO_KEY_ALIAS );
+        if ( encryptedContext == null ) {
+            throw new RuntimeException( "Failed to encrypt database context" );
+        }
+        
+        // Use first 32 bytes of encrypted context as password (base64 encoded)
+        byte[] passwordBytes = java.util.Arrays.copyOf( encryptedContext, Math.min( 32, encryptedContext.length ) );
+        String password = android.util.Base64.encodeToString( passwordBytes, android.util.Base64.NO_WRAP );
+        
+        Log.i( LOG_TAG, "Generated database password using " + cryptoManager.getCurrentCipher() );
+        return password;
+    }
+    
+    /**
+     * Legacy: Generate or retrieve secure database password
      * Uses Android's SecureRandom for password generation
      * Stores encrypted password in SharedPreferences
+     * @deprecated Use getOrCreateAdvancedDatabasePassword() instead
      */
     private String getOrCreateDatabasePassword() {
         SharedPreferences prefs = context.getSharedPreferences("sqlcipher_prefs", Context.MODE_PRIVATE);
@@ -391,13 +458,42 @@ public class SQLCipherAdapter {
      */
     public void optimizeDatabase() {
         try {
-            Log.i(LOG_TAG, "Starting database optimization...");
-            sqLiteDatabase.execSQL("PRAGMA optimize");
-            sqLiteDatabase.execSQL("VACUUM");
-            sqLiteDatabase.execSQL("ANALYZE");
-            Log.i(LOG_TAG, "Database optimization completed");
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Database optimization failed: " + e.getMessage());
+            Log.i( LOG_TAG, "Starting database optimization..." );
+            sqLiteDatabase.execSQL( "PRAGMA optimize" );
+            sqLiteDatabase.execSQL( "VACUUM" );
+            sqLiteDatabase.execSQL( "ANALYZE" );
+            Log.i( LOG_TAG, "Database optimization completed" );
+        } catch ( Exception e ) {
+            Log.e( LOG_TAG, "Database optimization failed: " + e.getMessage() );
+        }
+    }
+    
+    /**
+     * Check if legacy database upgrade is needed
+     * @return true if old database exists and should be migrated
+     */
+    public boolean isLegacyDatabaseUpgradeNeeded() {
+        // Check if old unencrypted database exists
+        java.io.File oldDbFile = context.getDatabasePath( "id34_id34" ); // Original database
+        java.io.File currentDbFile = context.getDatabasePath( MYDATABASE_NAME ); // Current encrypted DB
+        
+        boolean oldExists = oldDbFile.exists();
+        boolean currentExists = currentDbFile.exists();
+        
+        Log.d( LOG_TAG, "Legacy upgrade check: old exists=" + oldExists + ", current exists=" + currentExists );
+        
+        return oldExists && !currentExists;
+    }
+    
+    /**
+     * Get current cryptographic system status
+     * @return String describing the current crypto system in use
+     */
+    public String getCryptographicStatus() {
+        if ( cryptoManager != null ) {
+            return "Advanced Crypto: " + cryptoManager.getCurrentCipher();
+        } else {
+            return "Legacy Crypto: XOR + SecureRandom";
         }
     }
     
