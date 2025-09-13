@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:id="@+id/activity_idea_add" >
+
+    
+   <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ImageButton
+            android:contentDescription="@string/speech_to_text_parser"
+            android:id="@+id/imageButton1"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:onClick="STT"
+            android:src="@android:drawable/ic_btn_speak_now" />
+
+        <Button
+            android:id="@+id/button1"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1.78"
+            android:onClick="SaveIdea"
+            android:text="@string/save_idea" />
+
+    </LinearLayout>
+    
+    <MultiAutoCompleteTextView
+        android:id="@+id/multiAutoCompleteTextView1"
+        android:layout_width="match_parent"
+        android:layout_height="0dip"
+        android:layout_weight="0.90"
+        android:autoLink="all"
+        android:ems="10"
+        android:gravity="top"
+        android:hint="@string/textview_add_hint"
+        android:inputType="textMultiLine|textAutoComplete"
+        android:lines="4"
+        android:linksClickable="true"
+        android:maxLength="255"
+        android:maxLines="@integer/idea_max_lines"
+        android:singleLine="false" >
+
+        <requestFocus />
+    </MultiAutoCompleteTextView>
+
+
+
+</LinearLayout>

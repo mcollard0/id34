@@ -1,0 +1,23 @@
+# Security - Never commit secrets!
+.secrets
+*.secrets
+secrets.*
+.credentials
+.env
+
+# Android Studio Build Files
+.gradle/
+build/
+.idea/
+*.iml
+local.properties
+
+# APK Files
+*.apk
+*.ap_
+
+# Backup Files
+backup/
+
+# Logs
+*.log

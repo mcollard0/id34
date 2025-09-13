@@ -1,0 +1,9 @@
+<fragment xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:name="com.promethylhosting.id34.IdeaListFragment"
+    android:id="@+id/idea_list"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginLeft="16dp"
+    android:layout_marginRight="16dp"
+    tools:context=".IdeaListActivity" />
