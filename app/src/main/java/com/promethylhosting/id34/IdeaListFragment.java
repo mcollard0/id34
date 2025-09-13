@@ -342,51 +342,92 @@ public class IdeaListFragment extends ListFragment {
     }
     
     public void getData(DummyContent dcHashTags) {
-    	Log.e(LOG_TAG, "Defunct branch running. (I thought they ran out of funding? CodeGovt shutdown my arse.)");
-    	String link = "https://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=sendpage";
-    	new getStringFromRemoteTask().execute(link, dcHashTags);
+    	Log.i(LOG_TAG, "OFFLINE MODE: Loading data from local SQLCipher database");
+    	// OFFLINE MODE: Load from local database instead of network
+    	new getDataFromLocalDatabaseTask().execute(dcHashTags);
     }
     
     
-    private class getStringFromRemoteTask extends AsyncTask<Object, Void, String> { // should be defunct
+    // NEW: AsyncTask that loads data from local SQLCipher database
+    private class getDataFromLocalDatabaseTask extends AsyncTask<DummyContent, Void, Cursor> {
     	
     	DummyContent dcHashTags;
+    	
     	@Override
-    	protected String doInBackground(Object... params) {
-    		Log.e(LOG_TAG, "Defunct branch running. (I thought they ran out of funding? CodeGovt shutdown my arse.)");
-    		dcHashTags = (DummyContent)params[1];
-    		Iserver.init(context);
-    		Log.d(LOG_TAG, "AsyncTask : Iserver.getCats");
-    		String result  = Iserver.getStringFromRemote("Body=hh");
+    	protected Cursor doInBackground(DummyContent... params) {
+    		Log.i(LOG_TAG, "OFFLINE MODE: Loading categories from SQLCipher database");
+    		dcHashTags = params[0];
     		
-    		return result;
+    		try {
+    			// Initialize database connection
+    			if (sql == null) {
+    				// Check if database migration is needed
+    				DatabaseMigrationHelper migrationHelper = new DatabaseMigrationHelper(context);
+    				if (migrationHelper.isMigrationNeeded()) {
+    					Log.i(LOG_TAG, "Database migration required, performing migration...");
+    					migrationHelper.performMigration();
+    				}
+    				
+    				// Use encrypted SQLCipherAdapter
+    				sql = new SQLCipherAdapter(context);
+    				sql.openToRead();
+    			}
+    			
+    			// Query categories from database
+    			return sql.queryCats();
+    			
+    		} catch (Exception e) {
+    			Log.e(LOG_TAG, "Error loading data from database: " + e.getMessage());
+    			e.printStackTrace();
+    			return null;
+    		}
     	}
-    	protected void onPostExecute (String result) {
-    			Log.d(LOG_TAG, result);
-    			// ieterate trhoguh string
-    			BufferedReader br = new BufferedReader(new StringReader(result));
-    			String line =null;
+    	
+    	protected void onPostExecute(Cursor cursor) {
+    		Log.i(LOG_TAG, "OFFLINE MODE: Processing database results");
+    		
+    		if (cursor == null) {
+    			Log.e(LOG_TAG, "Cursor is null - no data available");
+    			progressDialogCancel();
+    			return;
+    		}
+    		
+    		try {
     			String cats[] = new String[500];
     			int i = 0;
-    			try {
-					while ((line = br.readLine()) != null)  {
-					   if (bSys_debug) Log.d(LOG_TAG,line);
-					   //DummyContent.addItem(new DummyItem("1", line));;
-					   if (line.length()>0) {  
-						   dcHashTags.addItem(new DummyItem(line, line, "false"));
-						   cats[i] = line;  
-						   i++; 
-					   }
-					   if (i==501) break; // can only process 500 lines, expand Iserver
-					} 
-					Iserver.setHashTags(Arrays.copyOf(cats, i));
-					IdeaListFragment.onListChanged();
-					progressDialogCancel();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} 
-    			br=null;
-    	}   
-       }
+    			
+    			// Process cursor data
+    			int nameIndex = cursor.getColumnIndex("name"); // KEY_CAT should map to "name"
+    			if (nameIndex == -1) nameIndex = cursor.getColumnIndex("KEY_CAT");
+    			if (nameIndex == -1) nameIndex = 1; // fallback to second column
+    			
+    			for (cursor.moveToFirst(); !cursor.isAfterLast() && i < 500; cursor.moveToNext()) {
+    				String categoryName = cursor.getString(nameIndex);
+    				if (categoryName != null && categoryName.length() > 0) {
+    					Log.d(LOG_TAG, "Adding category: " + categoryName);
+    					dcHashTags.addItem(new DummyItem(categoryName, categoryName, "false"));
+    					cats[i] = categoryName;
+    					i++;
+    				}
+    			}
+    			
+    			// Update Iserver hashtags
+    			Iserver.setHashTags(Arrays.copyOf(cats, i));
+    			Log.i(LOG_TAG, "OFFLINE MODE: Loaded " + i + " categories from database");
+    			
+    			// Refresh the UI
+    			IdeaListFragment.onListChanged();
+    			progressDialogCancel();
+    			
+    		} catch (Exception e) {
+    			Log.e(LOG_TAG, "Error processing database cursor: " + e.getMessage());
+    			e.printStackTrace();
+    			progressDialogCancel();
+    		} finally {
+    			if (cursor != null) {
+    				cursor.close();
+    			}
+    		}
+    	}
+    }
 }

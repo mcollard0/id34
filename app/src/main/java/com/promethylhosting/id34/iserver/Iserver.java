@@ -91,8 +91,9 @@ public class Iserver {
 	} 
 	
 	public static String getServerDateTime() {
-		// TODO Auto-generated method stub
-	return getStringFromRemote("https://id34.info/converse.php?aa=alcoholics&From="+mPhoneNumber+"&Body=!getdatetime", context);
+		// OFFLINE MODE: Return current system time instead of server time
+		Log.i(LOG_TAG, "OFFLINE MODE: Using local system time instead of server time");
+		return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
 	}
 
 	
