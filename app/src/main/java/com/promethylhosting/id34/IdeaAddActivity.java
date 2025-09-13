@@ -43,7 +43,7 @@ public class IdeaAddActivity extends Activity {
 	String LOG_TAG = "ID34";
 	ArrayAdapter<String> aaStr;
 	Boolean bSys_debug = false;
-	private SQLiteAdapter sql ;    
+	private SQLCipherAdapter sql ;
 	InputMethodManager inputMethodManager;
 
 
@@ -93,7 +93,7 @@ public class IdeaAddActivity extends Activity {
 	    
 	    context = getApplicationContext();
         
-		sql = new SQLiteAdapter(context);
+		sql = new SQLCipherAdapter(context);
 		sql.openToRead();
 		
 	    prefs = context.getSharedPreferences("com.promethylhosting.id34", Context.MODE_PRIVATE);

@@ -26,4 +26,8 @@ dependencies {
     compile 'com.android.support:appcompat-v7:19.+'
     compile 'com.google.android.gms:play-services:+'
     compile files('lib/gcm.jar')
+    
+    // SQLCipher for Android - encrypted database
+    compile 'net.zetetic:android-database-sqlcipher:3.5.9@aar'
+    compile 'net.zetetic:sqlcipher-android:3.5.9'
 }

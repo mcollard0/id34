@@ -51,7 +51,7 @@ public class IdeaListFragment extends ListFragment {
 	protected static final int CONTEXTMENU_EDITITEM = 1; 
 	protected static final int CONTEXTMENU_DELETEITEM = 0; 
     private static Boolean bSys_debug=false;
-    private SQLiteAdapter sql = null;
+    private SQLCipherAdapter sql = null;
 
     MenuItem mnuAdd = null;
     MenuItem mnuRefresh = null; 
@@ -319,7 +319,19 @@ public class IdeaListFragment extends ListFragment {
     	  
       		if (progressDialog != null) progressDialog = ProgressDialog.show(getActivity(), "", "Loading...");
       		try {
-      			sql = new SQLiteAdapter(context);
+      			// Check if database migration is needed
+      			DatabaseMigrationHelper migrationHelper = new DatabaseMigrationHelper(context);
+      			if (migrationHelper.isMigrationNeeded()) {
+      				Log.i(LOG_TAG, "Database migration required, performing migration...");
+      				boolean migrationSuccess = migrationHelper.performMigration();
+      				if (!migrationSuccess) {
+      					Log.e(LOG_TAG, "Database migration failed!");
+      					// Continue with SQLCipherAdapter anyway - it will create new database
+      				}
+      			}
+      			
+      			// Use encrypted SQLCipherAdapter
+      			sql = new SQLCipherAdapter(context);
       			sql.openToRead();
       			if (progressDialog != null) progressDialog.cancel();
       		} catch ( Exception e) {

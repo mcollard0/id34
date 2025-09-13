@@ -11,7 +11,7 @@ public class ServerInteractionService extends Service {
 	
 	private SharedPreferences prefs;
 	private static Context context = null;
-	private SQLiteAdapter sql = null;
+	private SQLCipherAdapter sql = null;
 	private static String LOG_TAG = "ID34";
 
 	private static Boolean bRefresh = false;
@@ -54,7 +54,7 @@ public class ServerInteractionService extends Service {
 	            	String lastUpdate = prefs.getString("LastUpdateSuccessDT", "1970-01-01 00:06:00");
 	            	Log.i(LOG_TAG, "Service giant wakes up. Getting ready to update... " + lastUpdate);
 	            	
-	                sql = new SQLiteAdapter(context);
+	                sql = new SQLCipherAdapter(context);
 	                sql.openToWrite();
 	                Boolean bError1 = sql.updateDBCats(lastUpdate);
 	                Boolean bError2 = sql.updateDBIdeas(lastUpdate); // TEST THIS ~~~ /// TODO: 

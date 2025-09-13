@@ -51,7 +51,7 @@ public class IdeaDetailFragment extends Fragment {
     //private static ArrayAdapter aaIdeas;
     //private static String saIdeas[];
     private static Boolean bDebug=false;
-    private SQLiteAdapter sql ;    
+    private SQLCipherAdapter sql ;
     
 	protected static final int CONTEXTMENU_COMPLETEITEM = 2;
 	protected static final int CONTEXTMENU_EDITITEM = 1; 
@@ -67,7 +67,7 @@ public class IdeaDetailFragment extends Fragment {
         super.onCreate(savedInstanceState);
         
         context = getActivity();
-		sql = new SQLiteAdapter(context);
+		sql = new SQLCipherAdapter(context);
 		sql.openToRead();
 		
         if (getArguments().containsKey(ARG_ITEM_ID)) {

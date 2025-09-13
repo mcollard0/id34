@@ -5,7 +5,8 @@ ID34 is an Android application for managing ideas organized by categories. It us
 
 ## Database Schema
 
-### Current Database: `id34_id34` (Version 2)
+### Current Database: `id34_id34_encrypted` (Version 3) ✅ **ENCRYPTED**
+**Previous**: `id34_id34` (Version 2) - Unencrypted SQLite (migrated automatically)
 
 #### Table: `tblCategory`
 ```sql
@@ -113,8 +114,10 @@ GET /converse.php?Body=!delete&id={id}
 - **`GCMIntentService`**: Handle Google Cloud Messaging notifications
 - **`ServerInteractionService`**: Background server synchronization
 
-#### Data Layer
-- **`SQLiteAdapter`**: Primary database interface class
+#### Data Layer  
+- **`SQLCipherAdapter`**: Primary encrypted database interface class ✅
+- **`SQLiteAdapter`**: Legacy unencrypted database class (deprecated)
+- **`DatabaseMigrationHelper`**: Handles migration from SQLite to SQLCipher ✅
 - **`Iserver`**: Server communication layer
 
 ### Data Flow
@@ -157,11 +160,16 @@ GET /converse.php?Body=!delete&id={id}
 - **Search Functionality**: Temp search table created but limited implementation
 - **Reminder System**: Database fields present, UI integration unclear
 
+### ✅ Recently Implemented (2025-09-13)
+- **SQLCipher Database Encryption**: Complete AES-256 encryption at rest
+- **Database Migration System**: Automatic migration from SQLite to SQLCipher
+- **Secure Key Management**: Automatic password generation and secure storage
+- **HTTPS Secure Communication**: All endpoints migrated from HTTP to HTTPS
+- **SQL Injection Protection**: Parameterized queries throughout application
+
 ### ❌ Missing/Planned Features
 - Modern Android architecture (Room, ViewModel, LiveData)
-- HTTPS secure communication
-- SQLite database encryption
-- Data compression for large text fields
+- Data compression for large text fields  
 - Comprehensive error handling and offline sync conflict resolution
 
 ## Known Issues & Technical Constraints
