@@ -1,15 +1,19 @@
 package com.promethylhosting.id34.iserver;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
-import java.net.URL;
 import java.util.Arrays;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -33,7 +37,7 @@ public class Iserver {
 	// only return items which arent null
 	public static String[] getHashTags() { 
 		//if (hashtags == null) return new String[] {}; // fix fc when restarting
-	return Arrays.copyOf(hashtags, hashtags.length); }
+		return Arrays.copyOf(hashtags, hashtags.length); }
 
 	public static void setHashTags(String[] hashtags) {
 		Iserver.hashtags = hashtags;
@@ -78,8 +82,8 @@ public class Iserver {
 			mPhoneNumber = "+15555215554"; // Default for emulator
 			Log.i(LOG_TAG, "Using default phone number: " + mPhoneNumber);
 		}
-
-	return true;
+	
+		return true;
 	} 
 	public static String getLastError() { return sLastError; }
 	public Iserver getInstance() {
@@ -89,7 +93,7 @@ public class Iserver {
 	public static String getServerDateTime() {
 		// OFFLINE MODE: Return current system time instead of server time
 		Log.i(LOG_TAG, "OFFLINE MODE: Using local system time instead of server time");
-	return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
+		return new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
 	}
 
 	
@@ -98,11 +102,11 @@ public class Iserver {
 	}
 
 	
-
+	
 	
 	public static String getStringFromRemote(String body) { // passthrough to add base url with session info
 		if (baseurl.length()<5) { init(); }
-	return getStringFromRemote(baseurl + "&" + body, context);
+		return getStringFromRemote(baseurl + "&" + body, context);
 	}
 	
 	public static JSONArray getJSONFromRemote(String body, Context context) {
@@ -115,7 +119,7 @@ public class Iserver {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	return jsonArray;
+		return jsonArray;
 	}
 	
 	// this should be a private function but it is used in class, new use should use getstring from remote
@@ -131,38 +135,39 @@ public class Iserver {
 	       ConnectivityManager connec =  (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
 	           if (connec.getNetworkInfo(0).isConnected() || connec.getNetworkInfo(1).isConnected()){
 	               try {
-	                       // Modern HttpURLConnection replaces deprecated Apache HttpClient
-	                       URL url = new URL(link);
-	                       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-	                       
-	                       // Set request properties (equivalent to old HttpGet setup)
-	                       connection.setRequestMethod("GET");
-	                       connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; U; Android " + android.os.Build.VERSION.RELEASE + "; " +  android.os.Build.DEVICE + " " + android.os.Build.MODEL + ") HttpURLConnection/Java Mobile");
-	                       connection.setConnectTimeout(30000);
-	                       connection.setReadTimeout(30000);
-	                       
-	                       int statusCode = connection.getResponseCode();
-	                       if (statusCode == HttpURLConnection.HTTP_OK) {
+	                       HttpClient httpClient = new DefaultHttpClient();
+	                       HttpGet httpGet = new HttpGet(link);
+	                       httpGet.setHeader("User-Agent", "Mozilla/5.0 (Linux; U; Android " + 	android.os.Build.VERSION.RELEASE + "; " +  android.os.Build.DEVICE + " " + android.os.Build.MODEL + ") Apache.HttpClient.JAVA Version/1.4 Mobile "); 
+	               		
+	                       HttpParams params = httpClient.getParams();
+	                       HttpConnectionParams.setConnectionTimeout(params, 30000);
+	                       HttpConnectionParams.setSoTimeout(params, 30000);
+	                       HttpResponse response;
+	                       response = httpClient.execute(httpGet);
+	                       int statusCode = response.getStatusLine().getStatusCode();
+	                       if (statusCode == 200){
+	                           HttpEntity entity = response.getEntity();
 	                           InputStream inputStream = null;
-	                           try {
-	                               inputStream = connection.getInputStream();
-	                               dataReceived = convertStreamToString(inputStream);
-	                               Log.d(LOG_TAG,"URL: "+link + "\nData Received: " + dataReceived);
+	                           try{
+	                           	inputStream = entity.getContent();
+	                           	dataReceived =  convertStreamToString(inputStream);                            
+	                            Log.d(LOG_TAG,"URL: "+link + "\nData Received: " + dataReceived); // <--- does this need a loop?	
 	                           } catch (IOException e) {
 	                               Log.e("SAVING", "Could not load xml", e);
 	                           } finally {
-	                               if (inputStream != null) {
-	                                   inputStream.close();
-	                               }
+	                           	inputStream.close();
 	                           }
 	                       } else {
-	                           Log.d(LOG_TAG, "Status code "  + statusCode);
-	                           Toast("The network request failed with message " + statusCode + ". Please try again later.");
+	                    	   Log.d(LOG_TAG, "Status code "  + statusCode);
+	                    	   Toast("The network request failed with message " + statusCode + ". Please try again later.");
 	                       }
-	                       connection.disconnect();
+	                       httpClient.getConnectionManager().shutdown();
 	                   }catch (SocketTimeoutException e){  
 	                       //Handle not connecting to client !!!!
 	                       Log.d("SocketTimeoutException Thrown", e.toString());
+	                   } catch (ClientProtocolException e) {
+	                       //Handle not connecting to client !!!!
+	                       Log.d("ClientProtocolException Thrown", e.toString());
 	                   }catch (MalformedURLException e) {
 	                       // TODO Auto-generated catch block
 	                       e.printStackTrace();
@@ -177,8 +182,8 @@ public class Iserver {
 
 			
 		}
-
-
+	
+	
 	   //support functino
 		public static void Toast(String msg) { Toast.makeText(context, msg, Toast.LENGTH_LONG).show(); }
 
@@ -192,3 +197,4 @@ public class Iserver {
 		    }
 		}
 }
+

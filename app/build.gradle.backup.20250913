@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 28
-    buildToolsVersion "28.0.3"
+    compileSdkVersion 22
+    buildToolsVersion "22.0.1"
     defaultConfig {
         applicationId "com.promethylhosting.id34"
-        minSdkVersion 19  // Wider compatibility while still modern
-        targetSdkVersion 28  // Target Android 9 (still modern)
-        versionCode 8  // Updated for SDK 28 compatibility
-        versionName '2.2.0-android28'
+        minSdkVersion 15
+        targetSdkVersion 22
+        versionCode 6  // Android 15 compatibility
+        versionName '2.0.0-android15'
     }
     buildTypes {
         release {
