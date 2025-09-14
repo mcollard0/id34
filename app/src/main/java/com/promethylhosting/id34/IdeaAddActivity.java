@@ -45,6 +45,11 @@ public class IdeaAddActivity extends Activity {
 	Boolean bSys_debug = false;
 	private SQLCipherAdapter sql ;
 	InputMethodManager inputMethodManager;
+	
+	// Edit mode support
+	private boolean isEditMode = false;
+	private String editingIdeaId = null;
+	private String originalIdeaText = "";
 
 
 	@Override
@@ -107,6 +112,9 @@ public class IdeaAddActivity extends Activity {
 	    
 	    multiAutoCompleteTextView1 = (MultiAutoCompleteTextView) findViewById(R.id.multiAutoCompleteTextView1);
 
+	    // Check if we're in edit mode
+	    checkEditMode();
+	    
 	    //if (bSys_debug) Log.i(LOG_TAG, Arrays.toString(Iserver.getHashTags()));
 	    
 	    
@@ -192,6 +200,33 @@ public class IdeaAddActivity extends Activity {
 		  new atSaveIdea().execute();
 	}
 
+	/**
+	 * Check if we're in edit mode and pre-populate the text field
+	 */
+	private void checkEditMode() {
+		Intent intent = getIntent();
+		if (intent.hasExtra("EDIT_MODE") && intent.getBooleanExtra("EDIT_MODE", false)) {
+			isEditMode = true;
+			editingIdeaId = intent.getStringExtra(IdeaDetailFragment.ARG_ITEM_ID);
+			
+			Log.i(LOG_TAG, "Edit mode activated for idea ID: " + editingIdeaId);
+			
+			// Load the existing idea text from database
+			try {
+				originalIdeaText = sql.getIdeaNameFromId(Long.parseLong(editingIdeaId));
+				if (originalIdeaText != null && !originalIdeaText.isEmpty()) {
+					multiAutoCompleteTextView1.setText(originalIdeaText);
+					multiAutoCompleteTextView1.setSelection(originalIdeaText.length()); // Place cursor at end
+					Log.i(LOG_TAG, "Pre-populated text field with: " + originalIdeaText);
+				}
+			} catch (Exception e) {
+				Log.e(LOG_TAG, "Error loading idea for editing: " + e.getMessage());
+				Toast("Error loading idea for editing");
+				isEditMode = false; // Fallback to add mode
+			}
+		}
+	}
+
 	public void showKeyboard() {
 	findViewById(R.id.activity_idea_add).postDelayed(
 			new Runnable() {
@@ -226,14 +261,37 @@ public class IdeaAddActivity extends Activity {
 			// Save to local SQLCipher database
 			try {
 				SQLCipherAdapter sql = new SQLCipherAdapter(context);
-				long savedId = sql.saveIdeaLocal(text);
 				
-				if (savedId > 0) {
-					Toast("Idea saved successfully! ID: " + savedId);
-					Log.i(LOG_TAG, "OFFLINE MODE: Idea saved successfully with ID: " + savedId);
+				if (isEditMode && editingIdeaId != null) {
+					// UPDATE existing idea
+					Log.i(LOG_TAG, "EDIT MODE: Updating existing idea ID: " + editingIdeaId);
+					boolean updated = sql.updateIdeaById(Long.parseLong(editingIdeaId), text);
+					
+					if (updated) {
+						Toast("Idea updated successfully!");
+						Log.i(LOG_TAG, "EDIT MODE: Idea updated successfully for ID: " + editingIdeaId);
+						
+						// Update widget to show latest idea
+						LatestIdeaWidget.updateAllWidgets(context);
+					} else {
+						Toast("Failed to update idea");
+						Log.e(LOG_TAG, "Failed to update idea in database");
+					}
 				} else {
-					Toast("Failed to save idea");
-					Log.e(LOG_TAG, "Failed to save idea to local database");
+					// INSERT new idea
+					Log.i(LOG_TAG, "ADD MODE: Saving new idea");
+					long savedId = sql.saveIdeaLocal(text);
+					
+					if (savedId > 0) {
+						Toast("Idea saved successfully! ID: " + savedId);
+						Log.i(LOG_TAG, "ADD MODE: Idea saved successfully with ID: " + savedId);
+						
+						// Update widget to show latest idea
+						LatestIdeaWidget.updateAllWidgets(context);
+					} else {
+						Toast("Failed to save idea");
+						Log.e(LOG_TAG, "Failed to save idea to local database");
+					}
 				}
 			} catch (Exception e) {
 				Log.e(LOG_TAG, "Error saving idea: " + e.getMessage());

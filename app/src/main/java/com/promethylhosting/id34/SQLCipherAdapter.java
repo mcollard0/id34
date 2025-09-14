@@ -628,6 +628,114 @@ private void extractAndSaveCategories(String ideaText) {
 		}
 		return strRetVal;
 	}
+	
+	/**
+	 * Get the most recent idea text for widget display
+	 */
+	public String getMostRecentIdeaText() {
+		try {
+			String[] columns = new String[]{KEY_NAME};
+			Cursor cursor = sqLiteDatabase.query(MYDATABASE_TABLE_IDEA, columns, 
+					KEY_DELETED + " = ?", new String[]{"0"}, 
+					null, null, KEY_CREATED + " DESC", "1");
+					
+			if (cursor != null && cursor.getCount() > 0) {
+				cursor.moveToFirst();
+				String result = cursor.getString(0);
+				cursor.close();
+				return result;
+			}
+			if (cursor != null) cursor.close();
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error getting most recent idea: " + e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * Update an existing idea by ID
+	 */
+	public boolean updateIdeaById(long ideaId, String newText) {
+		try {
+			Log.i(LOG_TAG, "Updating idea ID " + ideaId + " with text: " + newText);
+			openToWrite();
+			
+			String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date());
+			
+			// Extract new categories from updated text
+			java.util.List<String> categoryIds = extractAndSaveCategoriesWithIds(newText);
+			
+			ContentValues contentValues = new ContentValues();
+			contentValues.put(KEY_NAME, newText);
+			contentValues.put(KEY_UPDATED, timestamp);
+			
+			// Update category associations
+			contentValues.put(KEY_CID0, categoryIds.size() > 0 ? Integer.parseInt(categoryIds.get(0)) : 0);
+			contentValues.put(KEY_CID1, categoryIds.size() > 1 ? Integer.parseInt(categoryIds.get(1)) : 0);
+			contentValues.put(KEY_CID2, categoryIds.size() > 2 ? Integer.parseInt(categoryIds.get(2)) : 0);
+			contentValues.put(KEY_CID3, categoryIds.size() > 3 ? Integer.parseInt(categoryIds.get(3)) : 0);
+			contentValues.put(KEY_CID4, categoryIds.size() > 4 ? Integer.parseInt(categoryIds.get(4)) : 0);
+			
+			int rowsAffected = sqLiteDatabase.update(MYDATABASE_TABLE_IDEA, contentValues, 
+					KEY_ID + " = ?", new String[]{String.valueOf(ideaId)});
+					
+			close();
+			return rowsAffected > 0;
+			
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error updating idea: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	/**
+	 * Delete an idea by ID (soft delete - set deleted=1)
+	 */
+	public boolean deleteIdeaById(long ideaId) {
+		try {
+			Log.i(LOG_TAG, "Deleting idea ID: " + ideaId);
+			openToWrite();
+			
+			ContentValues contentValues = new ContentValues();
+			contentValues.put(KEY_DELETED, 1); // Soft delete
+			contentValues.put(KEY_UPDATED, new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(new java.util.Date()));
+			
+			int rowsAffected = sqLiteDatabase.update(MYDATABASE_TABLE_IDEA, contentValues, 
+					KEY_ID + " = ?", new String[]{String.valueOf(ideaId)});
+					
+			close();
+			return rowsAffected > 0;
+			
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error deleting idea: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	/**
+	 * Delete a category by ID (soft delete - remove from category table)
+	 */
+	public boolean deleteCategoryById(String categoryId) {
+		try {
+			Log.i(LOG_TAG, "Deleting category ID: " + categoryId);
+			openToWrite();
+			
+			// For categories, we can do a hard delete since they're just hashtags
+			int rowsAffected = sqLiteDatabase.delete(MYDATABASE_TABLE_CATEGORY, 
+					KEY_ID + " = ?", new String[]{categoryId});
+					
+			close();
+			return rowsAffected > 0;
+			
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error deleting category: " + e.getMessage());
+			e.printStackTrace();
+			return false;
+		}
+	}
 
 	
 }

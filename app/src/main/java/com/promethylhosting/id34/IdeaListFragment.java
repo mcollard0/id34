@@ -184,26 +184,41 @@ public class IdeaListFragment extends ListFragment {
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         // TODO Add your menu entries here
         super.onCreateOptionsMenu(menu, inflater);
-        mnuAdd = menu.add("add");
-        mnuAdd.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        inflater.inflate(R.menu.main_menu, menu);
         
-        mnuRefresh = menu.add("Refresh");
+        // Keep references for backward compatibility
+        mnuAdd = menu.findItem(R.id.action_add);
+        mnuRefresh = menu.findItem(R.id.action_refresh);
     }
     
     @Override
     public boolean onOptionsItemSelected(MenuItem item)   { 	
-	   	if(item.getItemId() == mnuAdd.getItemId()) {
-	   		Log.i(LOG_TAG, "Launch Add Activity...");
-	   		
-	   		startActivity(new Intent(context, IdeaAddActivity.class));
-	   		return true;
-	   	} else if ( item.getItemId() == mnuRefresh.getItemId()){
-			context.startService(new Intent(context, ServerInteractionService.class)); // process data 
-			return true;
-	   		
-	   	} else { 
-	   		return false;
-	   	}
+        switch (item.getItemId()) {
+            case R.id.action_add:
+                Log.i(LOG_TAG, "Launch Add Activity...");
+                startActivity(new Intent(context, IdeaAddActivity.class));
+                return true;
+                
+            case R.id.action_refresh:
+                Log.i(LOG_TAG, "Refreshing content...");
+                refreshContent(); // New lightweight refresh method
+                return true;
+                
+            case R.id.action_edit:
+                Log.i(LOG_TAG, "Edit action selected");
+                // Edit will be handled via context menu for now
+                Toast.makeText(context, "Please long-press an item to edit", Toast.LENGTH_SHORT).show();
+                return true;
+                
+            case R.id.action_delete:
+                Log.i(LOG_TAG, "Delete action selected");
+                // Delete will be handled via context menu for now
+                Toast.makeText(context, "Please long-press an item to delete", Toast.LENGTH_SHORT).show();
+                return true;
+                
+            default:
+                return super.onOptionsItemSelected(item);
+        }
    	}
     
     @Override
@@ -228,6 +243,57 @@ public class IdeaListFragment extends ListFragment {
     
     public static void onListChanged() {
     	Log.e(LOG_TAG, "onListChanged fired, what do with it ?"); // TODO: ???
+    }
+    
+    /**
+     * Lightweight refresh method that reloads content pane without recreating entire activity
+     */
+    private void refreshContent() {
+        Log.i(LOG_TAG, "Refreshing content pane...");
+        
+        try {
+            // Show brief loading indicator
+            Toast.makeText(context, "Refreshing...", Toast.LENGTH_SHORT).show();
+            
+            // Reload data from database in background
+            new AsyncTask<Void, Void, Cursor>() {
+                @Override
+                protected Cursor doInBackground(Void... params) {
+                    try {
+                        if (sql == null) {
+                            sql = new SQLCipherAdapter(context);
+                            sql.openToRead();
+                        }
+                        return sql.queryCats();
+                    } catch (Exception e) {
+                        Log.e(LOG_TAG, "Error refreshing data: " + e.getMessage());
+                        return null;
+                    }
+                }
+                
+                @Override
+                protected void onPostExecute(Cursor newCursor) {
+                    if (newCursor != null && getActivity() != null) {
+                        try {
+                            // Update the existing adapter with new data
+                            SimpleCursorAdapter adapter = (SimpleCursorAdapter) getListAdapter();
+                            if (adapter != null) {
+                                adapter.changeCursor(newCursor);
+                                adapter.notifyDataSetChanged();
+                                Log.i(LOG_TAG, "Content refreshed successfully");
+                                Toast.makeText(context, "Content refreshed", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (Exception e) {
+                            Log.e(LOG_TAG, "Error updating adapter: " + e.getMessage());
+                        }
+                    }
+                }
+            }.execute();
+            
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "Error in refreshContent: " + e.getMessage());
+            Toast.makeText(context, "Refresh failed", Toast.LENGTH_SHORT).show();
+        }
     }
     
     @Override
@@ -300,17 +366,99 @@ public class IdeaListFragment extends ListFragment {
 		
 		switch (aItem.getItemId()) { 
 			case CONTEXTMENU_EDITITEM:
-				//menuInfo.position;
-				//aaHashTags.notifyDataSetChanged();
+				handleEditItem(menuInfo.position);
 				return true;  
 			case CONTEXTMENU_DELETEITEM: 
-				//menuInfo.position; 
-				/* Remove it from the list. */ 
-				//aaHashTags.notifyDataSetChanged();
-				return true; /* true means: "we handled the event". */ 
+				handleDeleteItem(menuInfo.position);
+				return true; 
 		} 
 		return false; 
-	} 
+	}
+	
+	/**
+	 * Handle editing an item - launch IdeaDetailActivity in edit mode
+	 */
+	private void handleEditItem(int position) {
+		try {
+			Cursor cursor = (Cursor) getListAdapter().getItem(position);
+			if (cursor != null) {
+				cursor.moveToPosition(position);
+				String itemId = cursor.getString(0); // Get the ID from first column
+				
+				Log.i(LOG_TAG, "Editing item with ID: " + itemId);
+				
+				// Launch IdeaDetailActivity with edit flag
+				Intent editIntent = new Intent(context, IdeaDetailActivity.class);
+				editIntent.putExtra(IdeaDetailFragment.ARG_ITEM_ID, itemId);
+				editIntent.putExtra("EDIT_MODE", true); // Flag to indicate edit mode
+				startActivity(editIntent);
+			}
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error editing item: " + e.getMessage());
+			Toast.makeText(context, "Error opening item for editing", Toast.LENGTH_SHORT).show();
+		}
+	}
+	
+	/**
+	 * Handle deleting an item with confirmation dialog
+	 */
+	private void handleDeleteItem(int position) {
+		try {
+			Cursor cursor = (Cursor) getListAdapter().getItem(position);
+			if (cursor != null) {
+				cursor.moveToPosition(position);
+				final String itemId = cursor.getString(0);
+				final int finalPosition = position;
+				String itemName = cursor.getString(cursor.getColumnIndex("cat")); // Get name for confirmation
+				
+				Log.i(LOG_TAG, "Attempting to delete item: " + itemId);
+				
+				// Show confirmation dialog
+				new android.app.AlertDialog.Builder(getActivity())
+					.setTitle("Delete Item")
+					.setMessage("Are you sure you want to delete '" + itemName + "'?")
+					.setPositiveButton("Delete", new android.content.DialogInterface.OnClickListener() {
+						public void onClick(android.content.DialogInterface dialog, int which) {
+							performDelete(itemId, finalPosition);
+						}
+					})
+					.setNegativeButton("Cancel", null)
+					.show();
+			}
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error preparing delete: " + e.getMessage());
+			Toast.makeText(context, "Error preparing delete", Toast.LENGTH_SHORT).show();
+		}
+	}
+	
+	/**
+	 * Actually perform the deletion after confirmation
+	 */
+	private void performDelete(String itemId, int position) {
+		try {
+			if (sql == null) {
+				sql = new SQLCipherAdapter(context);
+				sql.openToWrite();
+			}
+			
+			// Perform soft delete (set deleted=1)
+			boolean success = sql.deleteCategoryById(itemId);
+			
+			if (success) {
+				Log.i(LOG_TAG, "Item deleted successfully: " + itemId);
+				Toast.makeText(context, "Item deleted", Toast.LENGTH_SHORT).show();
+				
+				// Refresh the list to show changes
+				refreshContent();
+			} else {
+				Log.e(LOG_TAG, "Failed to delete item: " + itemId);
+				Toast.makeText(context, "Delete failed", Toast.LENGTH_SHORT).show();
+			}
+		} catch (Exception e) {
+			Log.e(LOG_TAG, "Error deleting item: " + e.getMessage());
+			Toast.makeText(context, "Delete error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+		}
+	}
     
 	// does this need run on UI thread?
     public static void Toast(String msg) { Toast.makeText(context, msg, Toast.LENGTH_LONG).show(); }

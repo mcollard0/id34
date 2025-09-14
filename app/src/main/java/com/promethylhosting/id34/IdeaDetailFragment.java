@@ -232,7 +232,14 @@ public class IdeaDetailFragment extends Fragment {
 			case CONTEXTMENU_EDITITEM:
 				/* Get the selected item out of the Adapter by its position. */
 				Log.i(LOG_TAG, "Edit request on " + menuInfo.id) ;
-				return true; /* true means: "we handled the event". */ 
+				
+				// Launch IdeaAddActivity in edit mode
+				Intent editIntent = new Intent(context, IdeaAddActivity.class);
+				editIntent.putExtra(IdeaDetailFragment.ARG_ITEM_ID, String.valueOf(menuInfo.id));
+				editIntent.putExtra("EDIT_MODE", true);
+				startActivity(editIntent);
+				
+				return true; /* true means: "we handled the event". */
 			case CONTEXTMENU_COMPLETEITEM:
 			    Thread thUpdateServerComplete = new Thread() {
 			        @Override
@@ -249,25 +256,73 @@ public class IdeaDetailFragment extends Fragment {
 			    thUpdateServerComplete.start();
 				return true; /* true means: "we handled the event". */ 
 			case CONTEXTMENU_DELETEITEM:
-			    Thread thUpdateServerDelete = new Thread() {
-			        @Override
-			        public void run() {
-			            try {
-			            	String response = sql.toggleCompleted(menuInfo.id);
-			            	Log.i(LOG_TAG, "Delete request on " + menuInfo.id + " " + response) ;
-			            } catch(Exception e) {
-			                // do nothing
-			            	Log.e(LOG_TAG, "Error Posting message:  " + e.getMessage());
-			            } 
-			        }
-			    };
-			    thUpdateServerDelete.start();
-			    return true; /* true means: "we handled the event". */ 
+				// Show confirmation dialog before deleting
+				new android.app.AlertDialog.Builder(getActivity())
+					.setTitle("Delete Idea")
+					.setMessage("Are you sure you want to delete this idea?")
+					.setPositiveButton("Delete", new android.content.DialogInterface.OnClickListener() {
+						public void onClick(android.content.DialogInterface dialog, int which) {
+							performIdeaDelete(menuInfo.id);
+						}
+					})
+					.setNegativeButton("Cancel", null)
+					.show();
+				return true; /* true means: "we handled the event". */
 		} 
 		return false; 
 	} 
 	
 	
+    /**
+     * Actually perform the idea deletion after confirmation
+     */
+    private void performIdeaDelete(final long ideaId) {
+    	Thread thUpdateServerDelete = new Thread() {
+	        @Override
+	        public void run() {
+	            try {
+	            	// Perform soft delete (set deleted=1)
+	            	boolean deleted = sql.deleteIdeaById(ideaId);
+	            	
+	            	if (deleted) {
+	            		Log.i(LOG_TAG, "Idea deleted successfully: " + ideaId);
+	            		getActivity().runOnUiThread(new Runnable() {
+	            			public void run() {
+	            				Toast("Idea deleted");
+	            				// Refresh the list view
+	            				try {
+	            					Cursor newCursor = loadIdeasFromDatabase();
+	            					IDFListViewAdapter adapter = (IDFListViewAdapter) ListView1.getAdapter();
+	            					if (adapter != null) {
+	            						adapter.changeCursor(newCursor);
+	            						adapter.notifyDataSetChanged();
+	            					}
+	            				} catch (Exception e) {
+	            					Log.e(LOG_TAG, "Error refreshing after delete: " + e.getMessage());
+	            				}
+	            			}
+	            		});
+	            	} else {
+	            		Log.e(LOG_TAG, "Failed to delete idea: " + ideaId);
+	            		getActivity().runOnUiThread(new Runnable() {
+	            			public void run() {
+	            				Toast("Delete failed");
+	            			}
+	            		});
+	            	}
+	            } catch(final Exception e) {
+	                Log.e(LOG_TAG, "Error deleting idea: " + e.getMessage());
+	                getActivity().runOnUiThread(new Runnable() {
+	            		public void run() {
+	            			Toast("Delete error: " + e.getMessage());
+	            		}
+	            	});
+	            } 
+	        }
+	    };
+	    thUpdateServerDelete.start();
+    }
+    
     public void Toast(String msg) {
     	if (context==null) return;
     	try {

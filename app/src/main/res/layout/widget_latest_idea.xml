@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:drawable/dialog_holo_light_frame"
+    android:padding="8dp"
+    android:id="@+id/widget_root">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Latest ID34 Idea"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/black"
+        android:gravity="center"
+        android:layout_alignParentTop="true" />
+
+    <TextView
+        android:id="@+id/widget_idea_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_title"
+        android:layout_marginTop="4dp"
+        android:text="Loading latest idea..."
+        android:textSize="10sp"
+        android:textColor="@android:color/black"
+        android:maxLines="3"
+        android:ellipsize="end"
+        android:gravity="start" />
+
+    <TextView
+        android:id="@+id/widget_tap_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/widget_idea_text"
+        android:layout_alignParentBottom="true"
+        android:layout_marginTop="2dp"
+        android:text="Tap to add new idea"
+        android:textSize="8sp"
+        android:textColor="@android:color/darker_gray"
+        android:gravity="center" />
+
+</RelativeLayout>
