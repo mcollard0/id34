@@ -4,8 +4,8 @@
     android:versionName="1.0" >
 
     <uses-sdk
-        android:minSdkVersion="23"
-        android:targetSdkVersion="33" />
+        android:minSdkVersion="15"
+        android:targetSdkVersion="22" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -18,7 +18,10 @@
 	<!-- GCM requires a Google account. -->
 	<uses-permission android:name="android.permission.GET_ACCOUNTS" />
 	<!-- Keeps the processor from sleeping when a message is received. -->
-	<uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
+    <!-- Android 15 compatibility -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 	
     <application
         android:icon="@drawable/ic_launcher"
