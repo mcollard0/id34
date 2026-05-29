@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/drawer_layout"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root_container"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/screen_background">
 
     <LinearLayout
+        android:id="@+id/main_content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/screen_background"
         android:orientation="vertical"
         android:padding="12dp">
 
@@ -45,6 +45,7 @@
         </ScrollView>
 
         <LinearLayout
+            android:id="@+id/bottom_input_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
@@ -77,34 +78,16 @@
         </LinearLayout>
     </LinearLayout>
 
-    <LinearLayout
-        android:id="@+id/drawer_content"
-        android:layout_width="320dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:background="@color/surface_background"
-        android:orientation="vertical"
-        android:padding="12dp">
+    <ImageButton
+        android:id="@+id/open_settings_button"
+        android:layout_width="52dp"
+        android:layout_height="52dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="16dp"
+        android:background="@drawable/bg_settings_button"
+        android:contentDescription="@string/settings_label"
+        android:padding="12dp"
+        android:src="@android:drawable/ic_menu_manage"
+        android:tint="@color/icon_tint" />
 
-        <TextView
-            android:id="@+id/drawer_title"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/drawer_title"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/drawer_ideas"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/open_backups_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/backups_label" />
-    </LinearLayout>
-
-</androidx.drawerlayout.widget.DrawerLayout>
+</FrameLayout>

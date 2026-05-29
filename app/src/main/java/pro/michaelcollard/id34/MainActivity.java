@@ -8,17 +8,17 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
-import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.ColorInt;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.gms.auth.UserRecoverableAuthException;
@@ -36,9 +36,7 @@ import pro.michaelcollard.id34.ui.BackupDialogFragment;
 import pro.michaelcollard.id34.ui.FlowLayout;
 import pro.michaelcollard.id34.ui.IdeaAdapter;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -46,12 +44,10 @@ public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "Id34";
     private static final int DEFAULT_BACKUP_RETENTION = 20;
     private IdeasRepository repository;
-    private IdeaAdapter drawerAdapter;
     private IdeaAdapter searchAdapter;
-    private DrawerLayout drawerLayout;
     private FlowLayout heatmapContainer;
     private RecyclerView searchResults;
-    private TextView drawerTitle;
+    private EditText searchInput;
     private String currentFilter = "";
     private GoogleAuthHelper googleAuthHelper;
     private DriveBackupHelper driveBackupHelper;
@@ -77,15 +73,31 @@ public class MainActivity extends AppCompatActivity {
             maybeAutoRestoreLatestBackup();
         }
 
-        drawerLayout = findViewById(R.id.drawer_layout);
+        View rootContainer = findViewById(R.id.root_container);
+        View mainContent = findViewById(R.id.main_content);
+        View bottomInputRow = findViewById(R.id.bottom_input_row);
         heatmapContainer = findViewById(R.id.heatmap_container);
-        drawerTitle = findViewById(R.id.drawer_title);
         searchResults = findViewById(R.id.search_results);
-        RecyclerView drawerIdeas = findViewById(R.id.drawer_ideas);
-
-        drawerIdeas.setLayoutManager(new LinearLayoutManager(this));
-        drawerAdapter = new IdeaAdapter(this, repository, this::onIdeasChanged);
-        drawerIdeas.setAdapter(drawerAdapter);
+        searchInput = findViewById(R.id.search_input);
+        int mainBasePaddingTop = mainContent.getPaddingTop();
+        int bottomInputBasePaddingBottom = bottomInputRow.getPaddingBottom();
+        ViewCompat.setOnApplyWindowInsetsListener(rootContainer, (v, insets) -> {
+            Insets systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            mainContent.setPadding(
+                    mainContent.getPaddingLeft(),
+                    mainBasePaddingTop + systemBarsInsets.top,
+                    mainContent.getPaddingRight(),
+                    mainContent.getPaddingBottom()
+            );
+            bottomInputRow.setPadding(
+                    bottomInputRow.getPaddingLeft(),
+                    bottomInputRow.getPaddingTop(),
+                    bottomInputRow.getPaddingRight(),
+                    bottomInputBasePaddingBottom + systemBarsInsets.bottom
+            );
+            return insets;
+        });
+        ViewCompat.requestApplyInsets(rootContainer);
 
         searchResults.setLayoutManager(new LinearLayoutManager(this));
         searchAdapter = new IdeaAdapter(this, repository, this::onIdeasChanged);
@@ -110,7 +122,6 @@ public class MainActivity extends AppCompatActivity {
             @Override public void afterTextChanged(Editable s) { }
         });
 
-        EditText searchInput = findViewById(R.id.search_input);
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -118,8 +129,7 @@ public class MainActivity extends AppCompatActivity {
             }
             @Override public void afterTextChanged(Editable s) { }
         });
-
-        findViewById(R.id.open_backups_button).setOnClickListener(v -> {
+        findViewById(R.id.open_settings_button).setOnClickListener(v -> {
             BackupDialogFragment dialog = new BackupDialogFragment(repository, this::requestBackup, this::requestPurge);
             dialog.show(getSupportFragmentManager(), "backups");
         });
@@ -149,7 +159,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void refreshAll() {
         refreshHeatmap();
-        applyDrawerFilter(currentFilter);
+        if (currentFilter == null || currentFilter.isEmpty()) {
+            searchResults.setVisibility(View.GONE);
+            return;
+        }
+        runSearch(currentFilter);
     }
 
     private void maybeAutoRestoreLatestBackup() {
@@ -206,7 +220,6 @@ public class MainActivity extends AppCompatActivity {
         searchAdapter.setIdeas(results);
         searchResults.setVisibility(results.isEmpty() ? View.GONE : View.VISIBLE);
         currentFilter = query;
-        applyDrawerFilter(query);
     }
 
     private void requestBackup(int retention) {
@@ -284,62 +297,20 @@ public class MainActivity extends AppCompatActivity {
             chip.setBackground(bg);
             chip.setOnClickListener(v -> {
                 currentFilter = word.word;
-                List<Idea> matches = getFilteredIdeasForDrawer(word.word);
-                applyDrawerFilter(word.word, matches);
-                drawerLayout.openDrawer(Gravity.END);
-                if (matches.size() == 1) {
-                    showEditDialog(matches.get(0));
-                }
+                searchInput.setText(word.word);
+                searchInput.setSelection(word.word.length());
+                runSearch(word.word);
             });
             heatmapContainer.addView(chip);
         }
     }
 
-    private void showEditDialog(Idea idea) {
-        EditText input = new EditText(this);
-        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setText(idea.content);
-        new AlertDialog.Builder(this)
-                .setTitle("Edit idea")
-                .setView(input)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    repository.updateIdea(idea.id, input.getText().toString().trim());
-                    onIdeasChanged();
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
 
     private void onIdeasChanged() {
         mutationSerial++;
         refreshAll();
     }
 
-    private void applyDrawerFilter(String filter) {
-        List<Idea> ideas = getFilteredIdeasForDrawer(filter);
-        applyDrawerFilter(filter, ideas);
-    }
-
-    private void applyDrawerFilter(String filter, List<Idea> ideas) {
-        drawerTitle.setText(filter == null || filter.isEmpty() ? getString(R.string.drawer_title) : "Filtered: " + filter);
-        drawerAdapter.setIdeas(ideas);
-    }
-
-    private List<Idea> getFilteredIdeasForDrawer(String filter) {
-        List<Idea> ideas = repository.listActiveIdeas();
-        if (filter == null || filter.isEmpty()) {
-            return ideas;
-        }
-        String loweredFilter = filter.toLowerCase(Locale.US);
-        List<Idea> filtered = new ArrayList<>();
-        for (Idea idea : ideas) {
-            String content = idea.content == null ? "" : idea.content;
-            if (content.toLowerCase(Locale.US).contains(loweredFilter)) {
-                filtered.add(idea);
-            }
-        }
-        return filtered;
-    }
 
     @ColorInt
     private int heatColor(int heat) {

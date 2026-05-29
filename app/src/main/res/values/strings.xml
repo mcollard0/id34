@@ -11,4 +11,5 @@
     <string name="backup_retention">Retention (1-99)</string>
     <string name="backup_now">Backup now</string>
     <string name="purge_old">Purge old backups</string>
+    <string name="settings_label">Settings</string>
 </resources>
