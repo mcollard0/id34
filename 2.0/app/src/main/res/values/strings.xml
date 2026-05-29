@@ -1,0 +1,11 @@
+<resources>
+
+    <string name="app_name">id34</string>
+    <string name="title_idea_detail">Idea Detail</string>
+    <string name="title_idea_list">Ideas</string>
+    <string name="title_idea_add">Add Idea</string>
+    <string name="save_idea">Save Idea</string>
+    <string name="textview_add_hint">Enter your idea here and click Save. For Example: Get new bank account. #bank #service #customer_service</string>
+    <string name="speech_to_text_parser">Speech To Text Parser</string>
+
+</resources>

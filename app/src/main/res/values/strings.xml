@@ -1,11 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <string name="app_name">id34</string>
-    <string name="title_idea_detail">Idea Detail</string>
-    <string name="title_idea_list">Ideas</string>
-    <string name="title_idea_add">Add Idea</string>
-    <string name="save_idea">Save Idea</string>
-    <string name="textview_add_hint">Enter your idea here and click Save. For Example: Get new bank account. #bank #service #customer_service</string>
-    <string name="speech_to_text_parser">Speech To Text Parser</string>
-
+    <string name="search_hint">Search ideas</string>
+    <string name="idea_hint">Type a new idea…</string>
+    <string name="add_label">Add</string>
+    <string name="drawer_title">Filtered ideas</string>
+    <string name="backups_label">Backups</string>
+    <string name="edit_label">Edit</string>
+    <string name="delete_label">Delete</string>
+    <string name="backup_retention">Retention (1-99)</string>
+    <string name="backup_now">Backup now</string>
+    <string name="purge_old">Purge old backups</string>
 </resources>

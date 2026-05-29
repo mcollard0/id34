@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="indigo_primary">#4F46E5</color>
+    <color name="indigo_primary_dark">#4338CA</color>
+    <color name="indigo_accent">#6366F1</color>
+    <color name="screen_background">#F8FAFC</color>
+    <color name="surface_background">#FFFFFF</color>
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#4B5563</color>
+    <color name="hint_text">#6B7280</color>
+    <color name="icon_tint">#374151</color>
+    <color name="heat_1">#64748B</color>
+    <color name="heat_2">#38BDF8</color>
+    <color name="heat_3">#10B981</color>
+    <color name="heat_4">#F59E0B</color>
+    <color name="heat_5">#F97316</color>
+    <color name="heat_6">#E11D48</color>
+</resources>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/surface_background"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/backup_retention"
+        android:textColor="@color/text_primary" />
+
+    <Spinner
+        android:id="@+id/retention_spinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/backup_now_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/backup_now" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/purge_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/purge_old" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/backups_list"
+        android:layout_width="match_parent"
+        android:layout_height="240dp" />
+</LinearLayout>

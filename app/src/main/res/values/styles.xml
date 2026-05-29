@@ -1,5 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="AppTheme" parent="android:Theme.Light" />
-
+    <style name="Theme.Id34" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/indigo_primary</item>
+        <item name="colorPrimaryVariant">@color/indigo_primary_dark</item>
+        <item name="colorSecondary">@color/indigo_accent</item>
+        <item name="android:colorBackground">@color/screen_background</item>
+        <item name="colorSurface">@color/surface_background</item>
+    </style>
 </resources>
