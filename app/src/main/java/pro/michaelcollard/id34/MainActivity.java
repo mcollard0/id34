@@ -11,6 +11,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -36,6 +37,7 @@ import pro.michaelcollard.id34.ui.BackupDialogFragment;
 import pro.michaelcollard.id34.ui.FlowLayout;
 import pro.michaelcollard.id34.ui.IdeaAdapter;
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,6 +45,8 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
     private static final String LOG_TAG = "Id34";
     private static final int DEFAULT_BACKUP_RETENTION = 20;
+    private static final int MAX_SEARCH_RESULTS_WITHOUT_SCROLL = 6;
+    private static final int SEARCH_RESULTS_SCROLL_HEIGHT_DP = 320;
     private IdeasRepository repository;
     private IdeaAdapter searchAdapter;
     private FlowLayout heatmapContainer;
@@ -83,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
         int bottomInputBasePaddingBottom = bottomInputRow.getPaddingBottom();
         ViewCompat.setOnApplyWindowInsetsListener(rootContainer, (v, insets) -> {
             Insets systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets imeInsets = insets.getInsets(WindowInsetsCompat.Type.ime());
+            int bottomInset = Math.max(systemBarsInsets.bottom, imeInsets.bottom);
             mainContent.setPadding(
                     mainContent.getPaddingLeft(),
                     mainBasePaddingTop + systemBarsInsets.top,
@@ -93,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                     bottomInputRow.getPaddingLeft(),
                     bottomInputRow.getPaddingTop(),
                     bottomInputRow.getPaddingRight(),
-                    bottomInputBasePaddingBottom + systemBarsInsets.bottom
+                    bottomInputBasePaddingBottom + bottomInset
             );
             return insets;
         });
@@ -212,14 +218,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void runSearch(String query) {
+        currentFilter = query;
         if (query.isEmpty()) {
+            searchAdapter.setIdeas(Collections.emptyList());
             searchResults.setVisibility(View.GONE);
             return;
         }
         List<Idea> results = repository.searchIdeas(query);
         searchAdapter.setIdeas(results);
-        searchResults.setVisibility(results.isEmpty() ? View.GONE : View.VISIBLE);
-        currentFilter = query;
+        if (results.isEmpty()) {
+            searchResults.setVisibility(View.GONE);
+            return;
+        }
+        updateSearchResultsHeight(results.size());
+        searchResults.setVisibility(View.VISIBLE);
     }
 
     private void requestBackup(int retention) {
@@ -296,6 +308,10 @@ public class MainActivity extends AppCompatActivity {
             bg.setColor(heatColor(word.heat));
             chip.setBackground(bg);
             chip.setOnClickListener(v -> {
+                if (word.word.equals(currentFilter) && searchResults.getVisibility() == View.VISIBLE) {
+                    clearFilter();
+                    return;
+                }
                 currentFilter = word.word;
                 searchInput.setText(word.word);
                 searchInput.setSelection(word.word.length());
@@ -303,6 +319,22 @@ public class MainActivity extends AppCompatActivity {
             });
             heatmapContainer.addView(chip);
         }
+    }
+    private void clearFilter() {
+        currentFilter = "";
+        searchInput.setText("");
+        searchAdapter.setIdeas(Collections.emptyList());
+        searchResults.setVisibility(View.GONE);
+    }
+
+    private void updateSearchResultsHeight(int resultCount) {
+        ViewGroup.LayoutParams params = searchResults.getLayoutParams();
+        int targetHeight = resultCount <= MAX_SEARCH_RESULTS_WITHOUT_SCROLL ? ViewGroup.LayoutParams.WRAP_CONTENT : dp(SEARCH_RESULTS_SCROLL_HEIGHT_DP);
+        if (params.height == targetHeight) {
+            return;
+        }
+        params.height = targetHeight;
+        searchResults.setLayoutParams(params);
     }
 
 
